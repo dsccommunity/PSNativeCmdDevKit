@@ -34,7 +34,7 @@ function Invoke-NativeCommand
         if ($DefaultSudo = Get-SudoPreference @PSBoundParameters)
         {
             $Sudo   = $DefaultSudo.Sudo
-            $SudoAs = $DefaultSudo
+            $SudoAs = $DefaultSudo.SudoAs
         }
 
     }
