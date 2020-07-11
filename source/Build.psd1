@@ -1,0 +1,3 @@
+@{
+    SourcePath = './PSNativeCmdDevKit.psd1'
+}

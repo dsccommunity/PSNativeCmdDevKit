@@ -1,0 +1,27 @@
+TOPIC
+    about_PSNaticeCmdDevKit
+
+SHORT DESCRIPTION
+    A collection of PowerShell functions to invoke native commands, cross platform.
+
+LONG DESCRIPTION
+    This modules is a collection of functions useful when implementing native command
+    wrappers that need to call a native command, parse the output, and return objects.
+    This is made to support Linux systems, but should also Windows binary commands.
+
+EXAMPLES
+    PS /home/user> Invoke-LinuxCommand -Executable 'lsb_release' -Parameters '--all' |
+        Get-PropertyHashFromListOutput
+
+NOTE:
+    Thank you to all those who contributed to this module, by writing code, sharing opinions, and provided feedback.
+
+TROUBLESHOOTING NOTE:
+    Look out on the Github repository for issues and new releases.
+
+SEE ALSO
+  - https://dsccommunity.org/
+
+KEYWORDS
+      Linux, Native, Windows, CLI, Command
+
