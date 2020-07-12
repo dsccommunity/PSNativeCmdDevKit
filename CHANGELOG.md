@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - GitVersion yaml configuration.
 
-## [v0.1.0]
+## [v0.1.0] - 2020-07-12
 
 ### Added
 - `Invoke-NativeCommand` helper, supporting sudo preference & error handling.
