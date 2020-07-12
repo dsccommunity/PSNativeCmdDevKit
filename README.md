@@ -5,6 +5,7 @@
 [![Azure DevOps tests](https://img.shields.io/azure-devops/tests/dsccommunity/PSNativeCmdDevKit/43/master)](https://dsccommunity.visualstudio.com/PSNativeCmdDevKit/_test/analytics?definitionId=43&contextType=build)
 [![PowerShell Gallery (with prereleases)](https://img.shields.io/powershellgallery/vpre/PSNativeCmdDevKit?label=PSNativeCmdDevKit%20Preview)](https://www.powershellgallery.com/packages/PSNativeCmdDevKit/)
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSNativeCmdDevKit?label=PSNativeCmdDevKit)](https://www.powershellgallery.com/packages/PSNativeCmdDevKit/)
+
 A set of functions to help develop "Native Command Wrapper" faster.
 
 ## Native Command Wrapper helper functions
@@ -120,3 +121,18 @@ It consists of a cross-platform command-line shell and associated scripting lang
 
 > Note: This bit of code could be improved, to look at the left padding of the previous property, and see if the padding increased.  
 > PR welcomed
+
+## Code of Conduct
+
+This project has adopted this [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Releases
+
+For each merge to the branch `master` a preview release will be
+deployed to [PowerShell Gallery](https://www.powershellgallery.com/).
+Periodically a release version tag will be pushed which will deploy a
+full release to [PowerShell Gallery](https://www.powershellgallery.com/).
+
+## Contributing
+
+Please check out common DSC Community [contributing guidelines](https://dsccommunity.org/guidelines/contributing).
