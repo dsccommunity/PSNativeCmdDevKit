@@ -8,19 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- For new features.
-
-### Changed
-- For changes in existing functionality.
-
-### Deprecated
-- For soon-to-be removed features.
-
-### Removed
-- For now removed features.
-
-### Fixed
-- For any bug fix.
-
-### Security
-- In case of vulnerabilities.
+- `Invoke-NativeCommand` helper, supporting sudo preference & error handling.
+- Commands to manage sudo preferences.
+- `Get-PropertyHashFromListOutput` to parse `Key: value` from STDOUT int a hashtable.
+- Adding readme details.
