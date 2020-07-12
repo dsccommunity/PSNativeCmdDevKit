@@ -36,6 +36,7 @@ function Get-LsbRelease {
     param
     (
     )
+
     $properties = Invoke-NativeCommand -Executable 'lsb_release' -Parameters '--all' |
         Get-PropertyHashFromListOutput -ErrorHandling {
             switch -Regex ($_) {
@@ -43,6 +44,7 @@ function Get-LsbRelease {
                 Default            { Write-Error "$_" }
             }
         }
+
     [PSCustomObject]$properties | Add-Member -TypeName 'LsbRelease' -PassThru
 }
 ```
