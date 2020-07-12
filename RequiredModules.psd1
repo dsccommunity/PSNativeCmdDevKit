@@ -18,5 +18,6 @@
     ModuleBuilder               = 'latest'
     ChangelogManagement         = 'latest'
     Sampler                     = 'latest'
+    xDscResourceDesigner        = 'latest'
 
 }
