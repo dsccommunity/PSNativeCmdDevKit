@@ -1,5 +1,10 @@
 # PSNativeCmdDevKit
 
+[![Build Status](https://dev.azure.com/dsccommunity/PSNativeCmdDevKit/_apis/build/status/dsccommunity.PSNativeCmdDevKit?branchName=master)](https://dev.azure.com/dsccommunity/PSNativeCmdDevKit/_build/latest?definitionId=43&branchName=master)
+![Azure DevOps coverage (branch)](https://img.shields.io/azure-devops/coverage/dsccommunity/PSNativeCmdDevKit/43/master)
+[![Azure DevOps tests](https://img.shields.io/azure-devops/tests/dsccommunity/PSNativeCmdDevKit/43/master)](https://dsccommunity.visualstudio.com/PSNativeCmdDevKit/_test/analytics?definitionId=43&contextType=build)
+[![PowerShell Gallery (with prereleases)](https://img.shields.io/powershellgallery/vpre/PSNativeCmdDevKit?label=PSNativeCmdDevKit%20Preview)](https://www.powershellgallery.com/packages/PSNativeCmdDevKit/)
+[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSNativeCmdDevKit?label=PSNativeCmdDevKit)](https://www.powershellgallery.com/packages/PSNativeCmdDevKit/)
 A set of functions to help develop "Native Command Wrapper" faster.
 
 ## Native Command Wrapper helper functions
