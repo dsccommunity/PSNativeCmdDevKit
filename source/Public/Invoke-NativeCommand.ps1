@@ -36,7 +36,6 @@ function Invoke-NativeCommand
             $Sudo   = $DefaultSudo.Sudo
             $SudoAs = $DefaultSudo.SudoAs
         }
-
     }
 
     [string[]]$CommandExpression = @()
