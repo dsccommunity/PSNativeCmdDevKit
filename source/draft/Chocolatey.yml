@@ -1,0 +1,11 @@
+Sections:
+  ChocoVersion:
+    StartWith: FirstLine # Regex | FirstLine | null
+    Until: AfterNumberOfLines #| NextSectionStartsWithRegex | forever
+    DoAfter: next # stop | next | loop | "GOTO:ChocoVersion"
+    Parser:
+      kind: ObjectMatch
+      spec:
+        Regex: ^(?<Name>[^\s]+)\s*v(?<version>[^\s]*)\s*\((?<stuff>[^\)]*)\)
+        Properties: ['Name','Stuff','Version']
+        Transform: PSCustomObject # customClass | module::CustomClass | module::CustomClass::StaticMethod()

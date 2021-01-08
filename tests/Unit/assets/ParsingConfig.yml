@@ -1,0 +1,23 @@
+---
+OutputGenerator:
+  cmd:
+    kind: '&'
+    spec: |
+      choco list --help
+  cmd0:
+    kind: string
+    spec: |
+      Just some multiline
+      output for parsing
+  cmd1: |
+    Just some multiline
+    output for parsing
+
+
+Sections:
+  ChocoVersion:
+    Kind: ObjectMatch
+    Spec:
+      startwith: FirstLine
+      until: blank_line
+      DoAfter: stop # next | loop | GOTO:ChocoVersion

@@ -4,20 +4,31 @@ function Get-PropertyHashFromListOutput
     [OutputType([hashtable])]
     param
     (
-        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
-        [Object]
+        [Parameter(ParameterSetName = 'AddExtraPropertiesUnderKey', ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'DiscardExtraProperties', ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
+        [AllowNull()]
         # Output from a command, typically the result of Invoke-LinuxCommand.
         # Error records will be handled by the scriptblock in -ErrorHandling parameter.
         # The latter defaults to send the error record to Write-Error.
+        [Object]
         $Output,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'AddExtraPropertiesUnderKey')]
+        [Parameter(ParameterSetName = 'DiscardExtraProperties')]
+        # Number of output lines (not STDERR) to ignore
+        # before processing the output.
+        [int]
+        $SkipOutputLines = 0,
+
+        [Parameter(ParameterSetName = 'AddExtraPropertiesUnderKey')]
+        [Parameter(ParameterSetName = 'DiscardExtraProperties')]
         # Regex with 'property' & 'val' Named groups
         # of a string to extract an hashtable key/value pair from a string.
         [regex]
         $Regex = '^\s*(?<property>[\w-\s]*):\s*(?<val>.*)',
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'AddExtraPropertiesUnderKey')]
+        [Parameter(ParameterSetName = 'DiscardExtraProperties')]
         # List of property names allowed to be parsed.
         # Default to '*' for all properties, otherwise the parsed properties
         # not listed here will either be discarded if -DiscardExtraProperties is set
@@ -38,7 +49,8 @@ function Get-PropertyHashFromListOutput
         [string]
         $AddExtraPropertiesAsKey = 'ExtraProperties',
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'AddExtraPropertiesUnderKey')]
+        [Parameter(ParameterSetName = 'DiscardExtraProperties')]
         # When the output of a native command has had its `STDERR` redirected
         # using `2>&1`, we'll send the ErrorRecords (output from STDERR) to
         # this scriptblock. By default: `$errorRecord | &{ Write-Error $_}`.
@@ -48,6 +60,8 @@ function Get-PropertyHashFromListOutput
 
     begin
     {
+        $lineNumber = 0
+        $SkipOutputLines = $SkipOutputLines -1 # re-indexing starting at 0
         $properties = @{}
         if (-not $DiscardExtraProperties.isPresent)
         {
@@ -59,7 +73,13 @@ function Get-PropertyHashFromListOutput
     {
         foreach ($line in $Output)
         {
-            Write-Debug "Output Line: $line"
+            if ($line -isnot [System.Management.Automation.ErrorRecord] -and $lineNumber -le $SkipOutputLines) {
+                Write-Debug "Skipping Output Line [$lineNumber]: $line"
+                $lineNumber++
+                continue
+            }
+
+            Write-Debug "Output Line [$lineNumber]: $line"
             if ($line -is [System.Management.Automation.ErrorRecord])
             {
                 $line | &$ErrorHandling
@@ -81,6 +101,7 @@ function Get-PropertyHashFromListOutput
                 }
 
                 $lastProperty = $propertyName
+                $lineNumber++
             }
             else
             {
@@ -97,6 +118,7 @@ function Get-PropertyHashFromListOutput
                 {
                     $properties[$AddExtraPropertiesAsKey][$lastProperty] += $line.Trim()
                 }
+                $lineNumber++
             }
         }
     }

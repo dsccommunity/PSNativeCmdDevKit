@@ -1,0 +1,53 @@
+output_generator:
+  - choco list --help
+  - choco install --help
+
+Sections:
+  ChocoVersion:
+    StartWith: FirstLine # Regex | FirstLine | null
+    Until: AfterNumberOfLines | NextSectionStartsWithRegex | forever
+    After: stop | next | loop | "GOTO:ChocoVersion"
+    Parser:
+      Type: ObjectMatch
+      config:
+        Regex: ^(?<Name>[^\s]+)\s*v(?<version>[^\s]*)\s*\((?<stuff>[^\)]*)\)
+        Properties: ['Name','Stuff','Version']
+        Transform: PSCustomObject # customClass | module::CustomClass | module::CustomClass::StaticMethod()
+
+  PageName:
+    StartWith: (?<PageName>[^\s]*)
+    Until: AfterNumberOfLines
+    Parser:
+      Type: StartWithRegexMatch
+      config:
+        Value: $Matches.PageName
+
+  Description:
+    StartWith: "^NOTE:"
+    Until: NextContextRegex
+
+  OptionsAndSwitches:
+    StartWith: '^Options\sand\sSwitches$'
+    Parser:
+      Type: subSection
+      Config:
+        OriginalParameters:
+          StartWith: '\s(?<short>\-[\w\?],)?\s*(?<long>--.*)'
+          Until: UseSameLine
+          Type: ObjectMatch
+          Transform: |
+            {
+              param($a)
+              $a -split ',\s' -replace '\s'
+            }
+        ParameterName:
+          Regex: '\s(?<short>\-[\w\?],)?\s*(?<long>--.*)'
+          Until: AfterNumberOfLines
+          NumberOfLines: 1
+          Transform: |
+            ((($Matches[0] -split ',\s' -replace '\s') | Sort-Object -Descending -Property Length)[0]) | ConvertTo-TitleCase) -replace '-'
+
+        ParameterHelp:
+          # Regex: '^\s{5,7}'
+          Until: SectionLoopStartWith
+          # breakLoopOn: NextContextRegex

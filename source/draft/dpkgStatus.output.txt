@@ -1,0 +1,14 @@
+Package: powershell
+Status: install ok installed
+Priority: extra
+Section: shells
+Installed-Size: 154614
+Maintainer: PowerShell Team <PowerShellTeam@hotmail.com>
+Architecture: amd64
+Version: 7.0.2-1.ubuntu.18.04
+Depends: libc6, libgcc1, libgssapi-krb5-2, liblttng-ust0, libstdc++6, zlib1g, libssl1.0.0, libicu60
+Description: PowerShell is an automation and configuration management platform.
+ It consists of a cross-platform command-line shell and associated scripting language.
+License: MIT License
+Vendor: Microsoft Corporation
+Homepage: https://microsoft.com/powershell

@@ -16,9 +16,17 @@ function Invoke-NativeCommand
         $Sudo,
 
         [Parameter()]
-        # Specify a user to sudo he command as. i.e.: `sudo otheruser ls -alh`
+        [AllowNull()]
+        # Specify a user to sudo he command as. i.e.: `sudo -u otheruser ls -alh`.
+        # If nothing is specified the User option is not used (`sudo command`)
         [String]
         $SudoAs,
+
+        [pscredential]
+        # User Credential so that its Password can be passed to sudo via echo `$Password | sudo -S your_sudo_command`.
+        # this should be your current password, and your account should be allowed to execute the command in
+        # the sudoers files.
+        $Credential, #= $((Get-Credential -UserName $env:user -Message "Enter your credential for sudo authorisation")),
 
         [Parameter()]
         # list of Parameters to pass to the invocation.
@@ -42,11 +50,24 @@ function Invoke-NativeCommand
 
     if ($SudoAs -and ($IsLinux -or $IsMacOS))
     {
-        $commandExpression += "sudo -u $SudoAs $Executable"
+        if ($Credential) {
+            $commandExpression +=  ('echo "{0}" | sudo -u {1} -S {2}' -f $Credential.GetNetworkCredential().Password, $SudoAs, $Executable)
+        }
+        else {
+            $commandExpression += "sudo -u $SudoAs $Executable"
+        }
     }
     elseif ($Sudo -and ($IsLinux -or $IsMacOS))
     {
-        $commandExpression += "sudo $Executable"
+        if ($Credential) {
+            $commandExpression +=  ('echo "{0}" | sudo -S {1}' -f $Credential.GetNetworkCredential().Password, $Executable)
+        }
+        else {
+            $commandExpression += "sudo $Executable"
+        }
+    }
+    elseif ($IsWindows -and $Credential) {
+        throw "runAs not implemented yet"
     }
     else
     {

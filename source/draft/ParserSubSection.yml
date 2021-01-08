@@ -1,0 +1,31 @@
+kind: ParserSubSection
+spec:
+  ParserSection:
+    StartWith: abc
+    Until: forever
+  ParserSectionWithSub:
+    kind: ParserSubSection
+    spec:
+      startwith: stuff
+      until: more stuff
+      Sections:
+        stuff:
+          startwith: nothing
+
+  stuff:
+    kind: PropertyValueParser
+    spec:
+      AllowedPropertyName: ['Property1','Property2']
+      ExtraProperty: Discard # | AddToKey
+      # ExtraPropertyKey: ExtraProperty
+      LineNotMatched: AppendToPreviousProperty # | Discard | Verbose | Debug
+      # the following lines parsed will be added as key/values of the same objects (instead of nested objects)
+      Regexes:
+        - Pattern: ^\s*(?<property>[\w-\s]*):\s*(?<value>.*)$
+          CaseSensitive: false
+          AllowNullValue: true
+          NamedGroupAsPropertyName: true
+          break: false
+        # The Named group regex MUST be property/value
+        - (\s\s)*(?<property>[^\s]+)\s(?<value>[^\s]+)
+      Transform: hashtable # OrderedDictionary | PSObject

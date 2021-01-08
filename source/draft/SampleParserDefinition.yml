@@ -1,0 +1,63 @@
+output_generator:
+  - |
+    Write-Host @'
+      MyTool v3.5.8-beta1 (stuff)
+      Regex
+      Line2
+      line3
+      end
+    '@
+
+PropertyCollection:
+  ObjectMatchSwitch:
+    - Regex: ^\s*(?<key>[\w-\s]*):\s*(?<value>.*)
+      Break: true
+
+
+Object:
+  Tool:
+    StartWith:
+      # Previous: true
+      Line: 0
+      # Regex: ^MyTool v(?<version>[^\s]*)
+    # Until:
+    #   NumberOfLines: 1
+      # NextPropertyRegex: | null | emptyLine: 1 | consecutiveEmptyLines: 2
+
+    Then: UseSameLineForNextProperty  # returnObjectGoto("x") MoveNext | stop | loop | "goto_path("ChocoVersion")
+
+    Value: |
+      $null = $line -match $this.Regex
+      [PSCustomObject]@{
+        Name    = 'MyTool'
+        version = $Matches.version
+      }
+
+  Tool2:
+    Until:
+      NumberOfLines: 1
+    Then: MoveNext
+
+    ObjectMatch:
+      Regex: ^(?<Name>[^\s]+)\s*v(?<version>[^\s]*)\s*\((?<stuff>[^\)]*)\)
+      Properties: ['Name','Stuff','Version']
+      Transform: PSCustomObject # customClass | module::CustomClass | module::CustomClass::StaticMethod()
+
+  stuff:
+    Until:
+      NextPropertyRegex: true
+    do: # this will return an array because it's a loop
+      ObjectMatchSwitch:
+        - Regex: ^(?<Name>[^\s]+)\s*v(?<version>[^\s]*)\s*\((?<stuff>[^\)]*)\)
+          Break: true
+        - Regex: ^(?<Name>[^\s]+)\s*v(?<version>[^\s]*)\s*\((?<stuff>[^\)]*)\)
+          Break: true
+
+  property2:
+    StartWith:
+      Regex: Regex
+    Until:
+      emptyLine: 1
+    Then: MoveNext # | stop | loop | "goto_path("ChocoVersion")
+
+

@@ -1,0 +1,45 @@
+# The ObjectMatch will match a regex and
+# build an object (default is hashtable)
+# out of the named groups of the regex.
+# This can be the
+ObjectMatch:
+  Regex: ^(?<Name>[^\s]+)\s*v(?<version>[^\s]*)\s*\((?<stuff>[^\)]*)\)
+  Properties: ['Name','Stuff','Version']
+  Transform: PSCustomObject # customClass | module::CustomClass | module::CustomClass::StaticMethod()
+
+PropertyValueParser:
+  AllowedPropertyName: ['Property1','Property2']
+  ExtraProperty: Discard # | AddToKey
+  # ExtraPropertyKey: ExtraProperty
+  LineNotMatched: AppendToPreviousProperty # | Discard | Verbose | Debug
+  # the following lines parsed will be added as key/values of the same objects (instead of nested objects)
+  Regexes:
+    # The Named group regex MUST be property/value
+    - Pattern: ^\s*(?<property>[\w-\s]*):\s*(?<value>.*)$
+      CaseSensitive: false
+      AllowNullValue: true
+      NamedGroupAsPropertyName: true
+      break: false
+    - (\s\s)*(?<stuff>[^\s]+)\s(?<value>[^\s]+)
+  Transform: hashtable # OrderedDictionary | PSObject
+
+ScriptBlock:
+  definition: |
+    {
+      # this is a scriptblock
+    }
+
+sections:
+  PropertyValueParser:
+    PropertyValueParser:
+  PropertyValueParser2:
+  AnotherProperty:
+    Until:
+      EmptyLine: 1
+      returnObject: true
+    then: goto_path('PropertyValueParser')
+    ObjectMatch:
+
+  ObjectMatch:
+    Regex: ^\s*(?<property>[\w-\s]*):\s*(?<value>.*)
+
