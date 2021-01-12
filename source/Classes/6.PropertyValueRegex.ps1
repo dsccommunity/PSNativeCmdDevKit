@@ -4,7 +4,7 @@ using namespace YamlDotNet.Serialization
 
 class PropertyValueRegex
 {
-    [regex] $Pattern
+    [string] $Pattern
     [bool] $CaseSensitive
     [bool] $AllowNullValue
     [bool] $AllMatches
@@ -19,7 +19,7 @@ class PropertyValueRegex
         $this.CaseSensitive = $false
         $this.AllowNullValue = $true
         $this.AllMatches = $true
-        $this.Pattern = [regex]$Regex
+        $this.Pattern = $Regex
     }
 
     PropertyValueRegex([IDictionary] $Definition)
@@ -53,10 +53,9 @@ class PropertyValueRegex
             $this.AllMatches = $false
         }
 
-        if ($Definition.Pattern)
+        if ($Definition.Pattern -as [regex])
         {
-            Write-Debug -Message "Casting '$($Definition.Pattern)' to [regex]."
-            $this.Pattern = [Regex]($Definition.Pattern)
+            $this.Pattern = $Definition.Pattern
         }
         else
         {

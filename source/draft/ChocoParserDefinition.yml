@@ -4,7 +4,7 @@ output_generator:
 
 Sections:
   ChocoVersion:
-    StartWith: FirstLine # Regex | FirstLine | null
+    StartsWith: FirstLine # Regex | FirstLine | null
     Until: AfterNumberOfLines | NextSectionStartsWithRegex | forever
     After: stop | next | loop | "GOTO:ChocoVersion"
     Parser:
@@ -15,7 +15,7 @@ Sections:
         Transform: PSCustomObject # customClass | module::CustomClass | module::CustomClass::StaticMethod()
 
   PageName:
-    StartWith: (?<PageName>[^\s]*)
+    StartsWith: (?<PageName>[^\s]*)
     Until: AfterNumberOfLines
     Parser:
       Type: StartWithRegexMatch
@@ -23,16 +23,16 @@ Sections:
         Value: $Matches.PageName
 
   Description:
-    StartWith: "^NOTE:"
+    StartsWith: "^NOTE:"
     Until: NextContextRegex
 
   OptionsAndSwitches:
-    StartWith: '^Options\sand\sSwitches$'
+    StartsWith: '^Options\sand\sSwitches$'
     Parser:
       Type: subSection
       Config:
         OriginalParameters:
-          StartWith: '\s(?<short>\-[\w\?],)?\s*(?<long>--.*)'
+          StartsWith: '\s(?<short>\-[\w\?],)?\s*(?<long>--.*)'
           Until: UseSameLine
           Type: ObjectMatch
           Transform: |
@@ -41,7 +41,7 @@ Sections:
               $a -split ',\s' -replace '\s'
             }
         ParameterName:
-          Regex: '\s(?<short>\-[\w\?],)?\s*(?<long>--.*)'
+          StartsWith: '\s(?<short>\-[\w\?],)?\s*(?<long>--.*)'
           Until: AfterNumberOfLines
           NumberOfLines: 1
           Transform: |

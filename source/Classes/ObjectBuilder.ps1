@@ -26,7 +26,19 @@ class ObjectBuilder
 
     static [object] BuildObject([string] $Definition)
     {
-        return [ObjectBuilder]::BuildObject('string', $Definition)
+
+        if (Test-Path -Path $Definition)
+        {
+            $DefinitionContent = Get-Content -Raw -Path $Definition | ConvertFrom-Yaml -ordered -ErrorAction Stop
+            # By default we expect a ConfigParser in a definition
+            Write-Debug -Message "Keys in Definition: $($DefinitionContent.keys)"
+            return [ObjectBuilder]::BuildObject('ConfigParser', $DefinitionContent)
+        }
+        else
+        {
+            # if it's not a valid path to a file, let's assume it's just a string.
+            return [ObjectBuilder]::BuildObject('string', $Definition)
+        }
     }
 
     static [object] BuildObject([string] $DefaultType, [string] $Definition)
@@ -41,8 +53,8 @@ class ObjectBuilder
 
     static [Object] BuildObject([string] $DefaultType, [IDictionary] $Definition)
     {
-        if (-not $Definition.Contains('kind')) {
-            Write-Debug "Dispatching specs as $DefaultType."
+        if (-not $Definition -contains 'kind') {
+            Write-Debug "Dispatching specs as $DefaultType.`r`n $($Definition | Format-List -Property * | Out-String)"
             return [ObjectBuilder]::BuildObject(
                 [ordered]@{
                     kind = $DefaultType

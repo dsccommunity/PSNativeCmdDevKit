@@ -1,4 +1,4 @@
-class ObjectMatch
+class ObjectMatch : LineParser
 {
     # Regex with Named groups to match the Line with
     # and extract properties
@@ -10,6 +10,11 @@ class ObjectMatch
     # Definition of transformation of the parsed object if any.
     [string] $Transform
 
+    ObjectMatch()
+    {
+        Write-Debug -Message "Calling ObjectMatch parameterless constructor."
+    }
+
     ObjectMatch([hashtable] $Definition)
     {
         $this.Regex      = $Definition.Regex
@@ -17,10 +22,16 @@ class ObjectMatch
         $this.Transform  = $Definition.Transform
     }
 
+    [object] ParseLine([object] $Line)
+    {
+        return $this.GetObject($Line)
+    }
+
     [Object] GetObject($Line)
     {
         if ($line -match $this.Regex)
         {
+            Write-Debug -Message "Line matches '$($this.Regex)'."
             # if Properties, then you need to order them
             if ($this.Properties)
             {
@@ -48,7 +59,7 @@ class ObjectMatch
             else
             {
                 $TransformerParams = @{
-                    TransformerDefinition = $this.Transform
+                    TypeTransformerDefinition = $this.Transform
                     ObjectToTransform = $object
                 }
 
@@ -57,6 +68,7 @@ class ObjectMatch
         }
         else
         {
+            Write-Debug -Message "Line did not match the regex: '$($this.Regex)'."
             return $null
         }
     }

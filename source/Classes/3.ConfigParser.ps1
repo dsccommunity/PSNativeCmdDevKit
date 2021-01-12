@@ -10,13 +10,13 @@ class ConfigParser : ParserSubSection
     [int] $SectionIndex = 0
 
     [YamlIgnoreAttribute()]
-    [int] $outputLineNumber = -1
+    [int] $OutputLineNumber = -1
 
     [YamlIgnoreAttribute()]
     [hashtable] $SectionLineCounters = @{}
 
     [YamlIgnoreAttribute()]
-    [Object] $previousSection = $null
+    hidden [ParserSection] $previousSection
 
     ConfigParser()
     {
@@ -90,20 +90,110 @@ class ConfigParser : ParserSubSection
         }
     }
 
-    [void] ParseLine([object] $line)
+    [void] ParseLine([object] $Line)
     {
+        $this.OutputLineNumber++
 
+        if ($this.ShouldMoveToNextSection($Line))
+        {
+            $this.MoveToNextSection()
+        }
+
+        Write-Debug -Message "[L#$($this.OutputLineNumber)] Processing line:`r`n$Line"
+
+        if ($this.getCurrentSectionName())
+        {
+            Write-Debug -Message "Parsing line with Section $($this.getCurrentSectionName())'s method."
+            if ([string]::IsNullOrEmpty($Line.Trim()))
+            {
+                $this.getCurrentSection().EmptyLineCounter++
+            }
+            else
+            {
+                $this.getCurrentSection().ParseLine($Line)
+            }
+        }
+
+        $this.IncrementCurrentSectionCounter()
     }
 
-    [bool] ShouldMoveToNextSection()
+    [ParserSection] getCurrentSection()
     {
+        return $this.Sections[$this.SectionIndex]
+    }
 
-        return $false
+    [string] getCurrentSectionName()
+    {
+        return $this.getCurrentSection().Name
+    }
+
+    [bool] ShouldMoveToNextSection([object] $Line)
+    {
+        if (
+            $this.getCurrentSection().Until.UntilRule -eq 'AfterNumberOfEmptyLines' -and
+            $this.getCurrentSection().Until.isUntilClauseReachedForSection($this.getCurrentSection())
+        )
+        {
+            Write-Debug -Message "[$($this.getCurrentSectionName())] Empty Line #$($this.getCurrentSection().EmptyLineCounter) found, moving off section."
+            return $true
+        }
+        elseif (
+            $this.getCurrentSection().Until.UntilRule -eq 'AfterNumberOfLines' -and
+            $this.getCurrentSection().Until.isUntilClauseReachedForSection($this.getCurrentSection())
+        )
+        {
+            Write-Debug -Message "[$($this.getCurrentSectionName())] Reached $($this.getCurrentSection().LineCounter) lines, moving off."
+            return $true
+        }
+        elseif (
+            $this.getCurrentSection().Until.UntilRule -eq 'NextSection' -and
+            $this.isNextSectionStarting($Line)
+        )
+        {
+            Write-Debug -Message "[$($this.getCurrentSectionName())] End of Section, next section is starting."
+            return $true
+        }
+        else
+        {
+            Write-Debug -Message "No need to move to next section."
+            return $false
+        }
+    }
+
+    [bool] isNextSectionStarting([object]$Line)
+    {
+        $nextSection = $this.Sections[($this.SectionIndex+1)]
+        if ($Line -match $nextSection.StartsWith)
+        {
+            return $true
+        }
+        else
+        {
+            return $false
+        }
+    }
+
+    [void] IncrementCurrentSectionCounter()
+    {
+        if ($currentSection = $this.getCurrentSection()) {
+            $currentSection.LineCounter++
+        }
+        else
+        {
+            Write-Verbose -Message "No section currently selected. Did you reach the end of your config?"
+        }
     }
 
     [void] MoveToNextSection()
     {
+        $this.previousSection = $this.getCurrentSection()
+        $this.PreviousSection.LineCounter = 0
+        $this.PreviousSection.EmptyLineCounter = 0
+        $this.SectionIndex++
 
+        if ($this.Sections[$this.SectionIndex+1])
+        {
+            Write-Debug -Message "Moved to Section '$($this.getCurrentSectionName())'"
+        }
     }
-
 }

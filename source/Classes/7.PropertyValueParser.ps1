@@ -2,7 +2,7 @@ using namespace System.Collections
 using namespace System.Collections.Specialized
 using namespace YamlDotNet.Serialization
 
-class PropertyValueParser
+class PropertyValueParser : LineParser
 {
     [string[]] $AllowedPropertyName
     [ExtraPropertyHandling] $ExtraProperty
@@ -154,21 +154,21 @@ class PropertyValueParser
     [Object] GetObject()
     {
         if (-not $this.Transform)
-            {
-                return $this.object
+        {
+            return $this.object
+        }
+        elseif ($this.Transform -match '^\{(?<scriptblock>[\W\w]*)\}$')
+        {
+            return [scriptblock]::Create($Matches.scriptblock).Invoke($this.object)
+        }
+        else
+        {
+            $TransformerParams = @{
+                TypeTransformerDefinition = $this.Transform
+                ObjectToTransform = $this.object
             }
-            elseif ($this.Transform -match '^\{(?<scriptblock>[\W\w]*)\}$')
-            {
-                return [scriptblock]::Create($Matches.scriptblock).Invoke($this.object)
-            }
-            else
-            {
-                $TransformerParams = @{
-                    TransformerDefinition = $this.Transform
-                    ObjectToTransform = $this.object
-                }
 
-                return (Get-TransformedObject @TransformerParams)
-            }
+            return (Get-TransformedObject @TransformerParams)
+        }
     }
 }

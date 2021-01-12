@@ -11,10 +11,10 @@ class ParserSubSection : ParserSection
         Write-Debug -Message "Calling [ParserSubSection] Parameterless constructor"
     }
 
-    ParserSubSection([IDictionary] $Definition) : base ([OrderedDictionary] $Definition)
+    ParserSubSection([IDictionary] $Definition)
     {
         Write-Debug -Message "Calling SubSection constructor."
-        Write-Debug -Message "Keys: $($Definition.Keys -join ', ')"
+        Write-Debug -Message "Keys: $($Definition.Keys -join ', ')."
         $this.LoadParserSection($Definition)
 
         if ($Definition.Sections)
@@ -27,6 +27,7 @@ class ParserSubSection : ParserSection
     {
         foreach ($SectionName in $SectionDefinitions.Keys) {
             $SectionDefinition = $SectionDefinitions[$SectionName]
+            $SectionDefinition['Name'] = $SectionName
             Write-Debug -Message "Adding section '$SectionName'."
             $this.Sections.Add(
                 $SectionName,
