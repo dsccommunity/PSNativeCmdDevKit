@@ -78,43 +78,35 @@ class ConfigParser : ParserSubSection
         }
     }
 
-    hidden [void] LoadSections([OrderedDictionary]$SectionDefinitions)
-    {
-        foreach ($SectionName in $SectionDefinitions.Keys) {
-            $SectionDefinition = $SectionDefinitions[$SectionName]
-            Write-Debug -Message "Adding section '$SectionName'."
-            $this.Sections.Add(
-                $SectionName,
-                [ObjectBuilder]::BuildObject('ParserSection', $SectionDefinition)
-            )
-        }
-    }
-
     [void] ParseLine([object] $Line)
     {
         $this.OutputLineNumber++
-
-        if ($this.ShouldMoveToNextSection($Line))
-        {
-            $this.MoveToNextSection()
-        }
-
         Write-Debug -Message "[L#$($this.OutputLineNumber)] Processing line:`r`n$Line"
 
-        if ($this.getCurrentSectionName())
+        do
         {
-            Write-Debug -Message "Parsing line with Section $($this.getCurrentSectionName())'s method."
-            if ([string]::IsNullOrEmpty($Line.Trim()))
+            if ($this.ShouldMoveToNextSection($Line))
             {
-                $this.getCurrentSection().EmptyLineCounter++
+                Write-Debug -Message "Moving to next section."
+                $this.MoveToNextSection()
             }
-            else
+
+            if ($this.getCurrentSection())
             {
-                $this.getCurrentSection().ParseLine($Line)
+                Write-Debug -Message "Parsing line #$($this.OutputLineNumber) with Section $($this.getCurrentSectionName())'s method."
+                if ([string]::IsNullOrEmpty($Line.Trim()))
+                {
+                    $this.getCurrentSection().EmptyLineCounter++
+                }
+                else
+                {
+                    $this.getCurrentSection().ParseLine($Line)
+                }
+
+                $this.IncrementCurrentSectionCounter()
             }
         }
-
-        $this.IncrementCurrentSectionCounter()
+        while ($this.getCurrentSection().Until.UntilRule -eq 'UseSameLine')
     }
 
     [ParserSection] getCurrentSection()
@@ -129,7 +121,11 @@ class ConfigParser : ParserSubSection
 
     [bool] ShouldMoveToNextSection([object] $Line)
     {
-        if (
+        if ($this.getCurrentSection().Until.UntilRule -eq 'UseSameLine' -and $this.getCurrentSection().LineCounter -gt 0)
+        {
+            return $true
+        }
+        elseif (
             $this.getCurrentSection().Until.UntilRule -eq 'AfterNumberOfEmptyLines' -and
             $this.getCurrentSection().Until.isUntilClauseReachedForSection($this.getCurrentSection())
         )
@@ -163,7 +159,7 @@ class ConfigParser : ParserSubSection
     [bool] isNextSectionStarting([object]$Line)
     {
         $nextSection = $this.Sections[($this.SectionIndex+1)]
-        if ($Line -match $nextSection.StartsWith)
+        if ($nextSection -and $Line -match $nextSection.StartsWith)
         {
             return $true
         }
@@ -186,14 +182,32 @@ class ConfigParser : ParserSubSection
 
     [void] MoveToNextSection()
     {
+        # before moving off, return the section's object and add to parent output object
         $this.previousSection = $this.getCurrentSection()
-        $this.PreviousSection.LineCounter = 0
-        $this.PreviousSection.EmptyLineCounter = 0
+        if ($this.previousSection)
+        {
+            Write-Debug -Message "Adding subkey $($this.previousSection.Name) to output object."
+            $this.OutputObject[$this.previousSection.Name] = $this.previousSection.GetParsedObject()
+        }
+
+        # Reset the previousSection in case we need to get back to it (should probably be moved to an init() method upon entry)
+        if ($this.previousSection)
+        {
+            $this.previousSection.OutputObject = [ordered]@{}
+            $this.PreviousSection.LineCounter = 0
+            $this.PreviousSection.EmptyLineCounter = 0
+        }
+
         $this.SectionIndex++
 
-        if ($this.Sections[$this.SectionIndex+1])
+        if ($this.getCurrentSection())
         {
             Write-Debug -Message "Moved to Section '$($this.getCurrentSectionName())'"
         }
+    }
+
+    [object] GetParsedObject()
+    {
+        return $this.OutputObject
     }
 }

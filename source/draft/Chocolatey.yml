@@ -1,14 +1,48 @@
 Sections:
+  verb: Get
+  noun: ChocolateyPackage
+  originalName: choco list
+  supportsShouldProcess: false
+
   ChocoVersion:
     StartsWith: FirstLine # Regex | FirstLine | null
     Until:
       NumberOfLines: 1
-    DoAfter: MoveNext # stop | MoveNext | loop | "GOTO:ChocoVersion"
-    MergeUp: AsProperty | MergeKeyValOverride | MergeKeyValMissing
-    WriteOutput: never | endOfSection | EveryLine
+    # MergeUp: AsProperty | MergeKeyValOverride | MergeKeyValMissing
+    # WriteOutput: never | endOfSection | EveryLine
     Parser:
       kind: ObjectMatch
       spec:
         Regex: ^(?<Name>[^\s]+)\s*v(?<version>[^\s]*)\s*(?<stuff>.*)
-        Properties: ['Name','Stuff','Version']
-        Transform: PSCustomObject # customClass | module::CustomClass | module::CustomClass::StaticMethod()
+        Properties: ['Name','Version']
+
+  PageName:
+    StartsWith: (?<PageName>[^\s]*) Command
+    until:
+      NumberOfLines: 1
+    Parser:
+      Regex: (?<PageName>[^\s]*)
+
+  # Description:
+  #   Parser:
+  #     Regex: .*
+
+  # Note:
+  #   StartsWith: '^NOTE:'
+  #   Parser:
+  #     Regex: .*
+
+  # Usage:
+  #   StartsWith: '^Usage'
+  #   Parser:
+  #     Regex: .*
+
+  # Examples:
+  #   StartsWith: '^Examples$'
+  #   Parser:
+  #     Regex: .*
+
+  ExitCodes:
+    StartsWith: '^Exit\sCodes'
+    Parser:
+      Regex: .*

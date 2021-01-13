@@ -5,11 +5,23 @@ using namespace YamlDotNet.Serialization
 class ParserSection
 {
     [YamlIgnoreAttribute()]
+    # Name of the Section, should be the key for the section in the config.
     [string] $Name
 
+    [object] $StaticValue
+
+    # decribe how the section starts, usually with the first line, or when the
+    # line input matches a given regex
     [string] $StartsWith        = $null     # FirstLine | Regex | FirstLine | null
+
+    # store wether the section has started (in case StartsWith is set)
+    [YamlIgnoreAttribute()]
+    [bool] $SectionHasStarted = $false
+
+    # Describes when the parser should move to the next section.
     [UntilClause] $Until        = 'NextSection' # AfterNumberOfLines | NextSectionStartsWithRegex | forever
-    [string] $DoAfter           = 'MoveNext'    # stop | next | loop | "GOTO:ChocoVersion"
+
+    # Parser that can parse the output for the section.
     [LineParser] $Parser        = $null
 
     [YamlIgnoreAttribute()]
@@ -20,7 +32,7 @@ class ParserSection
     [OrderedDictionary] $SectionValue = [ordered]@{}
 
     [YamlIgnoreAttribute()]
-    [hashtable] $OutputObject = @{}
+    [object] $OutputObject = [ordered]@{}
 
     # Constructor (empty)
     ParserSection ()
@@ -42,14 +54,38 @@ class ParserSection
     # call the getParsedObject if implemented on the Parser
     [void] ParseLine([Object] $Line)
     {
-        $this.OutputObject = $this.Parser.ParseLine($Line)
+        if (-not $this.SectionHasStarted)
+        {
+            if ($this.StartsWith -notin @('FirstLine'))
+            {
+                if ($Line -match $this.StartsWith)
+                {
+                    Write-Debug -Message "starting section as regex matches."
+                    $this.SectionHasStarted = $true
+                }
+                else
+                {
+                    Write-Debug -Message "This section hasn't started yet."
+                }
+            }
+            else
+            {
+                Write-Debug -Message "starting section, no regex required."
+                $this.SectionHasStarted = $true
+            }
+        }
+
+        if ($this.SectionHasStarted -and $this.Parser.ParseLine)
+        {
+            $this.OutputObject = $this.Parser.ParseLine($Line)
+        }
     }
 
     [object] GetParsedObject()
     {
-        if ($this.Parser.GetObject)
+        if ($this.Parser.GetParsedObject)
         {
-            return $this.Parser.GetObject()
+            return $this.Parser.GetParsedObject()
         }
         else
         {
@@ -69,19 +105,23 @@ class ParserSection
             $this.StartsWith = $Definition.StartsWith
         }
 
-        if ($Definition.DoAfter)
+        if ($Definition.keys -contains 'StaticValue')
         {
-            $this.DoAfter = $Definition.DoAfter
+            Write-Debug -Message "Creating Static Value Section [$($this.Name)]."
+            $this.StaticValue = $Definition.StaticValue
+            $this.OutputObject = $this.StaticValue
+            $this.Until =  [ObjectBuilder]::BuildObject('UntilClause', @{
+                UntilRule = 'UseSameLine'
+            })
         }
-
-        if ($Definition.Until)
+        elseif ($Definition.Until)
         {
             $this.Until = [ObjectBuilder]::BuildObject('UntilClause', $Definition.Until)
         }
 
         $this.Parser = foreach ($Parser in $Definition.Parser)
         {
-            [ObjectBuilder]::BuildObject('ObjectMatch', $Parser)
+            [ObjectBuilder]::BuildObject('AppendMatch', $Parser)
         }
     }
 }

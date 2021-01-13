@@ -9,8 +9,6 @@ class PropertyValueParser : LineParser
     [string] $ExtraPropertyName
     [LineNotMatchedHandling] $LineNotMatched
     [PropertyValueRegex[]] $Regexes
-    [string] $Transform
-    hidden [OrderedDictionary] $Object = [ordered]@{}
 
     PropertyValueParser([IDictionary]$Definition)
     {
@@ -41,8 +39,8 @@ class PropertyValueParser : LineParser
     {
         # try each regex in order and if it matches
         # either:
-        #   add Property/Value to $this.object
-        #   add namedgroupname/value to $this.Object
+        #   add Property/Value to $this.ObjectOutput
+        #   add namedgroupname/value to $this.ObjectOutput
         $lineMatched = $false
         foreach ($regex in $this.Regexes)
         {
@@ -116,27 +114,27 @@ class PropertyValueParser : LineParser
         if ($PropertyName -in $this.AllowedPropertyName)
         {
             Write-Debug -Message "Adding $PropertyName with value $Value"
-            $this.object.add($PropertyName, $Value)
+            $this.ObjectOutput.add($PropertyName, $Value)
         }
         elseif ($this.ExtraProperty -ne [ExtraPropertyHandling]::Discard)
         {
             if ($this.ExtraProperty -eq [ExtraPropertyHandling]::Add -and
-                $this.Object.Keys -notcontains $PropertyName)
+                $this.ObjectOutput.Keys -notcontains $PropertyName)
             {
                 Write-Debug -Message "Adding $PropertyName with value $Value"
-                $this.Object.Add($PropertyName,$Value)
+                $this.ObjectOutput.Add($PropertyName,$Value)
             }
             elseif ($this.ExtraProperty -eq [ExtraPropertyHandling]::AddUnderKey)
             {
-                if ($this.ExtraPropertyName -and $this.object.Keys -notcontains $this.ExtraPropertyName)
+                if ($this.ExtraPropertyName -and $this.ObjectOutput.Keys -notcontains $this.ExtraPropertyName)
                 {
-                    $this.object.add($this.ExtraPropertyName,[ordered]@{})
+                    $this.ObjectOutput.add($this.ExtraPropertyName,[ordered]@{})
                 }
 
-                if ($this.object.($this.ExtraPropertyName).keys -notcontains $PropertyName)
+                if ($this.ObjectOutput.($this.ExtraPropertyName).keys -notcontains $PropertyName)
                 {
                     Write-Debug -Message "Adding under $($this.ExtraPropertyName) property $PropertyName, value $Value"
-                    $this.object.($this.ExtraPropertyName).Add($PropertyName,$Value)
+                    $this.ObjectOutput.($this.ExtraPropertyName).Add($PropertyName,$Value)
                 }
             }
         }
@@ -149,26 +147,5 @@ class PropertyValueParser : LineParser
     [void] AddToLastProperty($value)
     {
 
-    }
-
-    [Object] GetObject()
-    {
-        if (-not $this.Transform)
-        {
-            return $this.object
-        }
-        elseif ($this.Transform -match '^\{(?<scriptblock>[\W\w]*)\}$')
-        {
-            return [scriptblock]::Create($Matches.scriptblock).Invoke($this.object)
-        }
-        else
-        {
-            $TransformerParams = @{
-                TypeTransformerDefinition = $this.Transform
-                ObjectToTransform = $this.object
-            }
-
-            return (Get-TransformedObject @TransformerParams)
-        }
     }
 }

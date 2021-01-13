@@ -4,7 +4,7 @@ using namespace YamlDotNet.Serialization
 
 class UntilClause
 {
-    [string] $UntilRule = 'NextSection'
+    [string] $UntilRule
     [Nullable[System.Int32]] $NumberOfLines = $null
     [Nullable[System.Int32]] $NumberOfEmptyLines = $null
 
@@ -15,7 +15,11 @@ class UntilClause
 
     UntilClause([string] $Definition)
     {
-        if ($Definition -eq 'NextSection' -or [string]::IsNullOrEmpty($Definition))
+        if ($Definition -eq 'UseSameLine')
+        {
+            $this.UntilRule = 'UseSameLine'
+        }
+        elseif ($Definition -eq 'NextSection' -or [string]::IsNullOrEmpty($Definition))
         {
             $this.UntilRule = 'NextSection'
         }
@@ -37,22 +41,57 @@ class UntilClause
 
     UntilClause([IDictionary]$Definition)
     {
-        if ($Definition.keys -contains 'NumberOfLines')
+        if ($Definition.UntilRule -eq 'UseSameLine')
         {
-            $this.UntilRule = 'AfterNumberOfLines'
-            $this.NumberOfLines = $Definition.NumberOfLines
+            $this.UntilRule = 'UseSameLine'
         }
-
-        if ($Definition.keys -contains 'NumberOfEmptyLines')
+        elseif ($Definition.UntilRule -eq 'NextSection')
         {
-            $this.UntilRule = 'AfterNumverOfEmptyLines'
-            $this.NumberOfEmptyLines = $Definition.NumberOfEmptyLines
+            $this.UntilRule = 'NextSection'
+        }
+        elseif (
+            $Definition.UntilRule -in @('EmptyLine','NumberOfEmptyLines','AfterNumberOfEmptyLines') -or
+            $Definition.keys -contains 'NumberOfEmptyLines'
+        )
+        {
+            $this.UntilRule = 'AfterNumberOfEmptyLines'
+            if ($Definition.NumberOfEmptyLines)
+            {
+                $this.NumberOfEmptyLines = $Definition.NumberOfEmptyLines
+            }
+            else
+            {
+                $this.NumberOfEmptyLines = 1
+            }
+        }
+        elseif (
+            $Definition.UntilRule -in @('NumberOfLines','AfterNumberOfLines') -or
+            $Definition.keys -contains 'NumberOfLines'
+        )
+        {
+            $this.UntilRule = "AfterNumberOfLines"
+            if ($Definition.NumberOfLines)
+            {
+                $this.NumberOfLines = $Definition.NumberOfLines
+            }
+            else
+            {
+                $this.NumberOfLines = 1
+            }
+        }
+        else
+        {
+            $this.UntilRule = 'NextSection'
         }
     }
 
     [bool] isUntilClauseReachedForSection([ParserSection] $Section)
     {
-        if (
+        if ($this.UntilRule -eq 'UseSameLine')
+        {
+            return $true
+        }
+        elseif (
             ($null -ne $this.NumberOfLines -and $Section.LineCounter -ge $this.NumberOfLines) -or
             ($null -ne $this.NumberOfEmptyLiness -and $Section.EmptyLineCounter -ge $this.NumberOfEmptyLines)
         )
@@ -65,4 +104,8 @@ class UntilClause
         }
     }
 
+    [string] ToString()
+    {
+        return ($this | ConvertTo-Yaml -Options EmitDefaults)
+    }
 }

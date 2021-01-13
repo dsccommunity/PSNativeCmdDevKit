@@ -6,7 +6,7 @@ class ParserSubSection : ParserSection
 {
     [OrderedDictionary] $Sections = [ordered]@{}
 
-    ParserSubSection() : base()
+    ParserSubSection() : base ()
     {
         Write-Debug -Message "Calling [ParserSubSection] Parameterless constructor"
     }
@@ -26,7 +26,22 @@ class ParserSubSection : ParserSection
     hidden [void] LoadParserSubSections([OrderedDictionary]$SectionDefinitions)
     {
         foreach ($SectionName in $SectionDefinitions.Keys) {
-            $SectionDefinition = $SectionDefinitions[$SectionName]
+            # if the section definition is a scalar,
+            # make it a static value.
+            if ($SectionDefinitions[$SectionName].GetType() -in @([string],[bool],[int]))
+            {
+                $SectionDefinition = [ordered]@{
+                    StaticValue = $SectionDefinitions[$SectionName]
+                    Until = @{
+                        UntilRule = 'UseSameLine'
+                    }
+                }
+            }
+            else
+            {
+                $SectionDefinition = $SectionDefinitions[$SectionName]
+            }
+
             $SectionDefinition['Name'] = $SectionName
             Write-Debug -Message "Adding section '$SectionName'."
             $this.Sections.Add(

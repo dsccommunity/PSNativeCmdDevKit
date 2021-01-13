@@ -2,7 +2,7 @@ class ObjectMatch : LineParser
 {
     # Regex with Named groups to match the Line with
     # and extract properties
-    [Regex] $Regex
+    [string] $Regex
 
     # Properties to extract and to order
     [string[]] $Properties
@@ -22,12 +22,7 @@ class ObjectMatch : LineParser
         $this.Transform  = $Definition.Transform
     }
 
-    [object] ParseLine([object] $Line)
-    {
-        return $this.GetObject($Line)
-    }
-
-    [Object] GetObject($Line)
+    [void] ParseLine([object] $Line)
     {
         if ($line -match $this.Regex)
         {
@@ -35,41 +30,20 @@ class ObjectMatch : LineParser
             # if Properties, then you need to order them
             if ($this.Properties)
             {
-                $object = [Ordered]@{}
                 $this.Properties.ForEach{
-                    $object.Add($_, $Matches.$_)
+                    $this.ObjectOutput.Add($_, $Matches.$_)
                 }
             }
             else
             {
                 # No order required, use $Matches
-                $Matches.remove(0)
-                $object = $Matches.Clone()
-            }
-
-            # If no Transform needed, return as-is
-            if (-not $this.Transform)
-            {
-                return $object
-            }
-            elseif ($this.Transform -match '^\{(?<scriptblock>[\W\w]*)\}$')
-            {
-                return [scriptblock]::Create($Matches.scriptblock).Invoke($object)
-            }
-            else
-            {
-                $TransformerParams = @{
-                    TypeTransformerDefinition = $this.Transform
-                    ObjectToTransform = $object
-                }
-
-                return (Get-TransformedObject @TransformerParams)
+                $this.ObjectOutput = $Matches.Clone()
+                $this.ObjectOutput.remove(0)
             }
         }
         else
         {
             Write-Debug -Message "Line did not match the regex: '$($this.Regex)'."
-            return $null
         }
     }
 }

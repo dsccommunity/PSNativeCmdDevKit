@@ -53,7 +53,8 @@ class ObjectBuilder
 
     static [Object] BuildObject([string] $DefaultType, [IDictionary] $Definition)
     {
-        if (-not $Definition -contains 'kind') {
+        Write-Debug -Message "Definition: $($Definition | Format-List -Property * | Out-String)"
+        if ($Definition.keys -notcontains 'kind') {
             Write-Debug "Dispatching specs as $DefaultType.`r`n $($Definition | Format-List -Property * | Out-String)"
             return [ObjectBuilder]::BuildObject(
                 [ordered]@{
@@ -63,7 +64,7 @@ class ObjectBuilder
             )
         }
         else {
-            Write-Debug "Definition defines kind, dispatching."
+            Write-Debug "Definition defines kind: $($Definition.Kind), dispatching."
             return [ObjectBuilder]::BuildObject($Definition)
         }
     }

@@ -16,14 +16,13 @@ Sections:
 
   PageName:
     StartsWith: (?<PageName>[^\s]*)
-    Until: AfterNumberOfLines
+    Until: EmptyLine
     Parser:
       Type: StartWithRegexMatch
       config:
         Value: $Matches.PageName
 
   Description:
-    StartsWith: "^NOTE:"
     Until: NextContextRegex
 
   OptionsAndSwitches:
