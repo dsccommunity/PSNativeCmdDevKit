@@ -53,9 +53,9 @@ class ObjectBuilder
 
     static [Object] BuildObject([string] $DefaultType, [IDictionary] $Definition)
     {
-        Write-Debug -Message "Definition: $($Definition | Format-List -Property * | Out-String)"
         if ($Definition.keys -notcontains 'kind') {
-            Write-Debug "Dispatching specs as $DefaultType.`r`n $($Definition | Format-List -Property * | Out-String)"
+            Write-Debug -Message "Dispatching specs as $DefaultType."
+            Write-Debug -Message "Definition: $($Definition | ConvertTo-Json -Depth 5)"
             return [ObjectBuilder]::BuildObject(
                 [ordered]@{
                     kind = $DefaultType
@@ -64,7 +64,8 @@ class ObjectBuilder
             )
         }
         else {
-            Write-Debug "Definition defines kind: $($Definition.Kind), dispatching."
+            Write-Debug -Message "Definition defines kind: $($Definition.Kind), dispatching."
+            Write-Debug -Message "Definition: $($Definition | ConvertTo-Json -Depth 5)"
             return [ObjectBuilder]::BuildObject($Definition)
         }
     }
@@ -127,7 +128,6 @@ class ObjectBuilder
 
         $specObject = $Definition.spec
         $script = "$moduleString`r`n$returnCode"
-        Write-Debug "ScriptBlock = {`r`n$script`r`n}"
         if ($ExecuteCode) {
             return [scriptblock]::Create($script).Invoke($specObject)
         }

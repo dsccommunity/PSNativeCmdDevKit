@@ -1,27 +1,27 @@
 Sections:
-  verb: Get
-  noun: ChocolateyPackage
-  originalName: choco list
-  supportsShouldProcess: false
+  # verb: Get
+  # noun: ChocolateyPackage
+  # originalName: choco list
+  # supportsShouldProcess: false
 
-  ChocoVersion:
-    StartsWith: FirstLine # Regex | FirstLine | null
-    Until:
-      NumberOfLines: 1
-    # MergeUp: AsProperty | MergeKeyValOverride | MergeKeyValMissing
-    # WriteOutput: never | endOfSection | EveryLine
-    Parser:
-      kind: ObjectMatch
-      spec:
-        Regex: ^(?<Name>[^\s]+)\s*v(?<version>[^\s]*)\s*(?<stuff>.*)
-        Properties: ['Name','Version']
+  # ChocoVersion:
+  #   StartsWith: FirstLine # Regex | FirstLine | null
+  #   Until:
+  #     NumberOfLines: 1
+  #   # MergeUp: AsProperty | MergeKeyValOverride | MergeKeyValMissing
+  #   # WriteOutput: never | endOfSection | EveryLine
+  #   Parser:
+  #     kind: ObjectMatch
+  #     spec:
+  #       Regex: ^(?<Name>[^\s]+)\s*v(?<version>[^\s]*)\s*(?<stuff>.*)
+  #       Properties: ['Name','Version']
 
-  PageName:
-    StartsWith: (?<PageName>[^\s]*) Command
-    until:
-      NumberOfLines: 1
-    Parser:
-      Regex: (?<PageName>[^\s]*)
+  # PageName:
+  #   StartsWith: (?<PageName>[^\s]*) Command
+  #   until:
+  #     NumberOfLines: 1
+  #   Parser:
+  #     Regex: (?<PageName>[^\s]*)
 
   # Description:
   #   Parser:
@@ -42,7 +42,24 @@ Sections:
   #   Parser:
   #     Regex: .*
 
-  ExitCodes:
-    StartsWith: '^Exit\sCodes'
+  # ExitCodes:
+  #   StartsWith: '^Exit\sCodes'
+  #   Parser:
+  #     Regex: .*
+
+  Parameters:
+    kind: ConfigParser
+    spec:
+      StartsWith: '\s(?<short>\-[\w\?],)?\s*(?<long>--.*)'
+      Sections:
+        originalName:
+          Parser:
+            kind: ObjectMatch
+            spec:
+              Regex: '\s(?<short>\-[\w\?],)?\s*(?<long>--.*)'
+
+  debug:
+    StartsWith: '^\s\-d'
     Parser:
       Regex: .*
+

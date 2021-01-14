@@ -81,7 +81,7 @@ class ConfigParser : ParserSubSection
     [void] ParseLine([object] $Line)
     {
         $this.OutputLineNumber++
-        Write-Debug -Message "[L#$($this.OutputLineNumber)] Processing line:`r`n$Line"
+        Write-Debug -Message "[ConfigParser('$($this.Name)')[L#$($this.OutputLineNumber)] Processing line:`r`n$Line"
 
         do
         {
@@ -93,13 +93,14 @@ class ConfigParser : ParserSubSection
 
             if ($this.getCurrentSection())
             {
-                Write-Debug -Message "Parsing line #$($this.OutputLineNumber) with Section $($this.getCurrentSectionName())'s method."
                 if ([string]::IsNullOrEmpty($Line.Trim()))
                 {
+                    Write-Debug -Message "Increment Empty Line Counter for $($this.GetCurrentSectionName())."
                     $this.getCurrentSection().EmptyLineCounter++
                 }
                 else
                 {
+                    Write-Debug -Message "Parsing line #$($this.OutputLineNumber) with Section $($this.getCurrentSectionName())'s method."
                     $this.getCurrentSection().ParseLine($Line)
                 }
 
@@ -151,7 +152,6 @@ class ConfigParser : ParserSubSection
         }
         else
         {
-            Write-Debug -Message "No need to move to next section."
             return $false
         }
     }
@@ -186,13 +186,15 @@ class ConfigParser : ParserSubSection
         $this.previousSection = $this.getCurrentSection()
         if ($this.previousSection)
         {
-            Write-Debug -Message "Adding subkey $($this.previousSection.Name) to output object."
-            $this.OutputObject[$this.previousSection.Name] = $this.previousSection.GetParsedObject()
-        }
+            Write-Verbose -Message "Adding key $($this.previousSection.Name) to output object."
+            if ($this.PreviousSection -is [ConfigParser])
+            {
+                $this.previousSection.MoveToNextSection()
+            }
 
-        # Reset the previousSection in case we need to get back to it (should probably be moved to an init() method upon entry)
-        if ($this.previousSection)
-        {
+            $this.OutputObject[$this.previousSection.Name] = $this.previousSection.GetParsedObject()
+
+            # Reset the previousSection in case we need to get back to it (should probably be moved to an init() method upon entry)
             $this.previousSection.OutputObject = [ordered]@{}
             $this.PreviousSection.LineCounter = 0
             $this.PreviousSection.EmptyLineCounter = 0
@@ -208,6 +210,7 @@ class ConfigParser : ParserSubSection
 
     [object] GetParsedObject()
     {
+        Write-Debug -Message "ConfigParser $($this.Name) GetParsedObject()."
         return $this.OutputObject
     }
 }

@@ -32,6 +32,7 @@ class ParserSubSection : ParserSection
             {
                 $SectionDefinition = [ordered]@{
                     StaticValue = $SectionDefinitions[$SectionName]
+                    Name = $SectionName
                     Until = @{
                         UntilRule = 'UseSameLine'
                     }
@@ -42,8 +43,16 @@ class ParserSubSection : ParserSection
                 $SectionDefinition = $SectionDefinitions[$SectionName]
             }
 
-            $SectionDefinition['Name'] = $SectionName
-            Write-Debug -Message "Adding section '$SectionName'."
+            if ($SectionDefinition.Keys -contains 'spec')
+            {
+                $SectionDefinition['spec']['Name'] = $SectionName
+            }
+            else
+            {
+                $SectionDefinition['Name'] = $SectionName
+            }
+
+            Write-Debug -Message "Adding section '$SectionName', with keys: $($SectionDefinition.Keys -join ', ')."
             $this.Sections.Add(
                 $SectionName,
                 [ObjectBuilder]::BuildObject('ParserSection', $SectionDefinition)

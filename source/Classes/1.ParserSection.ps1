@@ -79,6 +79,10 @@ class ParserSection
         {
             $this.OutputObject = $this.Parser.ParseLine($Line)
         }
+        elseif ($this.SectionHasStarted -and $this.getCurrentSection().Sections)
+        {
+            $this.ParseLine($Line)
+        }
     }
 
     [object] GetParsedObject()
@@ -89,6 +93,7 @@ class ParserSection
         }
         else
         {
+            Write-Debug -Message "Returning ParserSection OutputObject with keys $($this.OutputObject.keys -join ', ')."
             return $this.OutputObject
         }
     }
@@ -123,5 +128,10 @@ class ParserSection
         {
             [ObjectBuilder]::BuildObject('AppendMatch', $Parser)
         }
+    }
+
+    [string] ToString()
+    {
+        return ($this | ConvertTo-Yaml)
     }
 }
