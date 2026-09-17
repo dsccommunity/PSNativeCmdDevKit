@@ -1,5 +1,5 @@
-# Add-SudoPreferenceRule -Executable dpkg -ParameterFilterRule {$_.parameters -contains '-i' -or $_.parameters -contains '--install')}
-# Add-SudoPreferenceRule -Executable dpkg -ParameterFilterRule {$_.parameters -contains '-W' -or $_.parameters -contains '--show')} -SudoUser otheruser
+# Add-SudoPreferenceRule -Executable dpkg -ParameterFilterRule {$args -contains '-i' -or $args -contains '--install'}
+# Add-SudoPreferenceRule -Executable dpkg -ParameterFilterRule {$args -contains '-W' -or $args -contains '--show'} -SudoUser otheruser
 # Add-SudoPreferenceRule -EnableSudoForAllCommands
 # Add-SudoPreferenceRule -EnableSudoForAllCommands -SudoUser otheruser
 # Add-SudoPreferenceRule -DisableSudoForAllCommands
@@ -20,8 +20,8 @@ function  Add-SudoPreferenceRule
         # if you want to use sudo for an Executable, regardless of the parameters, use:
         # `-ParameterFilterRule *` or `-ParameterFilterRule {$true}`
         # Otherwise, you can evaluate the Parameters to be used, populated the $Args variable:
-        # `-ParameterFilterRule {$args -contains '-i' -or $args -contains '--install'}
-        [string]
+        # `-ParameterFilterRule {$args -contains '-i' -or $args -contains '--install'}`
+        [object]
         $ParameterFilterRule,
 
         [Parameter(ParameterSetName = 'SudoAll', Mandatory = $true)]
@@ -50,6 +50,15 @@ function  Add-SudoPreferenceRule
         $script:SudoPreferenceRules = [System.Collections.ArrayList]::new()
     }
 
+    if ($PSCmdlet.ParameterSetName -eq 'Sudo' -and
+        $ParameterFilterRule -isnot [scriptblock] -and
+        $ParameterFilterRule -ne '*')
+    {
+        throw [System.ArgumentException]::new(
+            'ParameterFilterRule must be a ScriptBlock or the wildcard string ''*''.'
+        )
+    }
+
     if ($EnableSudoForAllCommands.IsPresent -or $DisableSudoForAllCommands.IsPresent)
     {
         $Script:SudoAll = switch ($PSCmdlet.ParameterSetName)
@@ -64,11 +73,10 @@ function  Add-SudoPreferenceRule
     }
     elseif ($Executable -eq '*')
     {
-        $Script:SudoAll = switch -regex ($ParameterFilterRule.Trim())
+        $Script:SudoAll = switch ($ParameterFilterRule)
         {
-            '^\$true$'  { $true }
-            '^\$false$' { $false }
-            Default     { $true }
+            '*'     { $true }
+            Default { [bool]$ParameterFilterRule.Invoke() }
         }
 
         $script:SudoAllAs = $SudoUser

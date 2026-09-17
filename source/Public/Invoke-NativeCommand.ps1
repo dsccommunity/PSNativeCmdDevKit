@@ -38,30 +38,26 @@ function Invoke-NativeCommand
         }
     }
 
-    [string[]]$CommandExpression = @()
+    [string] $Command = $Executable
+    [string[]] $CommandParameters = @()
 
     if ($SudoAs -and ($IsLinux -or $IsMacOS))
     {
-        $commandExpression += "sudo -u $SudoAs $Executable"
+        $Command = 'sudo'
+        $CommandParameters += '-u'
+        $CommandParameters += $SudoAs
+        $CommandParameters += $Executable
     }
     elseif ($Sudo -and ($IsLinux -or $IsMacOS))
     {
-        $commandExpression += "sudo $Executable"
-    }
-    else
-    {
-        $commandExpression += $Executable
+        $Command = 'sudo'
+        $CommandParameters += $Executable
     }
 
-    $commandExpression += $Parameters
+    $CommandParameters += $Parameters
 
-    # Mixes the Error stream and the success streams (redirect STDERR with STDOUT)
-    # What was in STDERR will be of type [ErrorRecord] if you need to differentiate for parsing.
-    $commandExpression += '2>&1'
+    Write-Verbose -Message "Running #> $Command $CommandParameters"
 
-    Write-Verbose -Message "Running #> $commandExpression"
-    [scriptblock]$commandExpression = [scriptblock]::create($commandExpression)
-
-    # Stream the output through the pipeline
-    & $commandExpression
+    # Stream output through the pipeline and mix STDERR with STDOUT.
+    & $Command @CommandParameters 2>&1
 }

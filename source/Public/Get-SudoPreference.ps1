@@ -32,7 +32,7 @@ function Get-SudoPreference
         {
             $RuleMatchFound = $script:SudoPreferenceRules | Where-Object -FilterScript {
                 $Executable -eq $_.Executable -and
-                ($_.ParameterFilterRule.ToString().Trim() -eq '*' -or [scriptblock]::create($_.ParameterFilterRule).Invoke($Parameters))
+                ($_.ParameterFilterRule -eq '*' -or $_.ParameterFilterRule.Invoke($Parameters))
             } | Select-Object -First 1
         }
 

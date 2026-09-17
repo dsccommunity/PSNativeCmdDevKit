@@ -12,7 +12,7 @@ function  Get-SudoPreferenceRule
         $Executable,
 
         [Parameter(ParameterSetName = 'byCommand')]
-        [string]
+        [object]
         $ParameterFilterRule,
 
         [Parameter(ParameterSetName = 'all')]
@@ -36,7 +36,7 @@ function  Get-SudoPreferenceRule
         $script:SudoPreferenceRules.Where{
             $_.Executable -eq $Executable -and
             $(
-                if ($ParameterFilterRule -and $ParameterFilterRule.Trim() -ne '*')
+                if ($ParameterFilterRule -and $ParameterFilterRule -ne '*')
                 {
                     $_.ParameterFilterRule -eq $ParameterFilterRule
                 }

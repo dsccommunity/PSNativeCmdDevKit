@@ -53,6 +53,20 @@ The Invoke-NativeCommand tells which executable to invoke, and with what argumen
 In this example, we don't require sudo either, otherwise we
 could have hadded the `-Sudo` parameter to `Invoke-NativeComand`.
 
+The executable and each parameter are invoked as separate values. They are not
+combined into PowerShell source code.
+
+Sudo preference filters accept either `*` to match every parameter list or a
+script block:
+
+```PowerShell
+Add-SudoPreferenceRule -Executable 'dpkg' `
+    -ParameterFilterRule { $args -contains '--install' }
+```
+
+The supplied script block is retained and invoked directly. String expressions
+are rejected and are never recompiled as PowerShell code.
+
 ## Converting a list-formatted output to a Hash
 
 In the example above, the output of the command is a list view of the properties retrieved:

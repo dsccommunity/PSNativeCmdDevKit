@@ -11,7 +11,7 @@ function Remove-SudoPreferenceRule
 
         [Parameter(ParameterSetName = 'ByValue', Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         # The parameter filter rule to match with the executable to remve.
-        [string]
+        [object]
         $ParameterFilterRule,
 
         [Parameter(Dontshow = $true, ParameterSetName = 'ByIndex', Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
@@ -50,7 +50,7 @@ function Remove-SudoPreferenceRule
         $CurrentIndex = 0
         $indexesToRemove = $script:SudoPreferenceRules.Foreach{
             if ($_.Executable -eq $Executable -and
-                ($_.ParameterFilterRule.ToString().Trim() -eq '*' -or $_.ParameterFilterRule -eq $ParameterFilterRule)
+                ($_.ParameterFilterRule -eq '*' -or $_.ParameterFilterRule -eq $ParameterFilterRule)
             )
             {
                 $CurrentIndex

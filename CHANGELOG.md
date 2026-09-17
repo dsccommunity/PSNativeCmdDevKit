@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - GitVersion yaml configuration.
 
+### Security
+
+- Removed dynamic PowerShell source generation from `Invoke-NativeCommand`.
+- Stopped recompiling sudo preference filter strings and require filters to be
+  script blocks or the `*` wildcard.
+
 ## [v0.1.0] - 2020-07-12
 
 ### Added
