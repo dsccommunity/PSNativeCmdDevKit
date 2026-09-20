@@ -1,3 +1,23 @@
+<#
+    .SYNOPSIS
+        Resolves the sudo preference for a native command.
+
+    .DESCRIPTION
+        Returns the first global or command-specific sudo preference whose
+        executable and argument filter match the supplied invocation.
+
+    .PARAMETER Executable
+        Specifies the executable for which to resolve a sudo preference.
+
+    .PARAMETER Parameters
+        Specifies the native argument values evaluated by script-block filters.
+
+    .EXAMPLE
+        Get-SudoPreference -Executable 'dpkg' -Parameters '--install', 'package.deb'
+
+        Returns the matching sudo preference, when one is registered.
+#>
+
 function Get-SudoPreference
 {
     [CmdletBinding()]
@@ -20,21 +40,16 @@ function Get-SudoPreference
     if ($script:SudoAll)
     {
         @{
-            $Sudo = $true
-            $SudoAs = $script:SudoAllAs
+            Sudo   = $true
+            SudoAs = $script:SudoAllAs
         }
     }
     elseif ($script:SudoPreferenceRules)
     {
-        $enumerator = $script:SudoPreferenceRules.GetEnumerator()
-        $RuleMatchFound = $false
-        while ($enumerator.MoveNext() -and -not $RuleMatchFound)
-        {
-            $RuleMatchFound = $script:SudoPreferenceRules | Where-Object -FilterScript {
-                $Executable -eq $_.Executable -and
-                ($_.ParameterFilterRule -eq '*' -or $_.ParameterFilterRule.Invoke($Parameters))
-            } | Select-Object -First 1
-        }
+        $RuleMatchFound = $script:SudoPreferenceRules | Where-Object -FilterScript {
+            $Executable -eq $_.Executable -and
+            ($_.ParameterFilterRule -eq '*' -or $_.ParameterFilterRule.Invoke($Parameters))
+        } | Select-Object -First 1
 
         if ($RuleMatchFound)
         {

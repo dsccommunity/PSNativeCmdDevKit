@@ -13,32 +13,143 @@ Describe 'Sudo preference rules' {
         $script:SudoAllAs = $null
     }
 
-    It 'retains and invokes a supplied script block directly' {
+    It 'Should retain and invoke a supplied script block directly' {
         $filter = { $args -contains '--install' }
         Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule $filter
 
         $storedRule = Get-SudoPreferenceRule -Executable 'dpkg'
         $storedRule.ParameterFilterRule | Should -Be $filter
-        Get-SudoPreference -Executable 'dpkg' -Parameters '--install' |
-            Should -Not -BeNullOrEmpty
+        $preference = Get-SudoPreference -Executable 'dpkg' -Parameters '--install'
+        $preference.Sudo | Should -BeTrue
+        $preference.SudoAs | Should -BeNullOrEmpty
         Get-SudoPreference -Executable 'dpkg' -Parameters '--list' |
             Should -BeNullOrEmpty
     }
 
-    It 'supports the wildcard without compiling source code' {
-        Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule '*'
+    It 'Should support the wildcard and preserve the sudo user' {
+        Add-SudoPreferenceRule `
+            -Executable 'dpkg' `
+            -ParameterFilterRule '*' `
+            -SudoUser 'service-user'
 
-        Get-SudoPreference -Executable 'dpkg' -Parameters '--anything' |
-            Should -Not -BeNullOrEmpty
+        $preference = Get-SudoPreference -Executable 'dpkg' -Parameters '--anything'
+        $preference.Sudo | Should -BeTrue
+        $preference.SudoAs | Should -Be 'service-user'
     }
 
-    It 'rejects string expressions' {
+    It 'Should reject string expressions' {
         {
             Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule '$true'
         } | Should -Throw
     }
 
-    It 'preserves the language mode of a constrained caller script block' {
+    It 'Should replace a matching rule at index zero' {
+        $firstFilter = { $args -contains '--install' }
+        $replacementFilter = { $args -contains '--remove' }
+
+        Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule $firstFilter
+        Add-SudoPreferenceRule -Executable 'apt' -ParameterFilterRule '*'
+        Add-SudoPreferenceRule `
+            -Executable 'dpkg' `
+            -ParameterFilterRule $firstFilter `
+            -SudoUser 'root' `
+            -WarningAction SilentlyContinue
+
+        $rules = @(Get-SudoPreferenceRule -All)
+        $rules | Should -HaveCount 2
+        $rules[0].Executable | Should -Be 'dpkg'
+        $rules[0].SudoAs | Should -Be 'root'
+
+        Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule $replacementFilter
+        @(Get-SudoPreferenceRule -All) | Should -HaveCount 3
+    }
+
+    It 'Should enable and disable sudo for all commands' {
+        Add-SudoPreferenceRule -EnableSudoForAllCommands -SudoUser 'root'
+
+        $preference = Get-SudoPreference -Executable 'anything'
+        $preference.Sudo | Should -BeTrue
+        $preference.SudoAs | Should -Be 'root'
+
+        Add-SudoPreferenceRule -DisableSudoForAllCommands
+        Get-SudoPreference -Executable 'anything' | Should -BeNullOrEmpty
+        $script:SudoAllAs | Should -BeNullOrEmpty
+    }
+
+    It 'Should evaluate an all-command script block without recompiling it' {
+        Add-SudoPreferenceRule -Executable '*' -ParameterFilterRule { $false }
+        $script:SudoAll | Should -BeFalse
+
+        Add-SudoPreferenceRule -Executable '*' -ParameterFilterRule { $true }
+        $script:SudoAll | Should -BeTrue
+    }
+
+    It 'Should return rules by executable and filter' {
+        $filter = { $true }
+        Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule $filter
+        Add-SudoPreferenceRule -Executable 'apt' -ParameterFilterRule '*'
+
+        @(Get-SudoPreferenceRule -Executable 'dpkg') | Should -HaveCount 1
+        @(Get-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule $filter) |
+            Should -HaveCount 1
+        Get-SudoPreferenceRule -Executable 'missing' | Should -BeNullOrEmpty
+    }
+
+    It 'Should remove a rule by value' {
+        Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule '*'
+        Add-SudoPreferenceRule -Executable 'apt' -ParameterFilterRule '*'
+
+        Remove-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule '*'
+
+        @(Get-SudoPreferenceRule -All) | Should -HaveCount 1
+        Get-SudoPreferenceRule -Executable 'dpkg' | Should -BeNullOrEmpty
+    }
+
+    It 'Should remove a rule by index' {
+        Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule '*'
+        Add-SudoPreferenceRule -Executable 'apt' -ParameterFilterRule '*'
+
+        Remove-SudoPreferenceRule -Index 0
+
+        $rules = @(Get-SudoPreferenceRule -All)
+        $rules | Should -HaveCount 1
+        $rules[0].Executable | Should -Be 'apt'
+    }
+
+    It 'Should remove all rules' {
+        Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule '*'
+        Add-SudoPreferenceRule -Executable 'apt' -ParameterFilterRule '*'
+
+        Remove-SudoPreferenceRule -All
+
+        @(Get-SudoPreferenceRule -All) | Should -HaveCount 0
+    }
+
+    It 'Should remove duplicate matches without skipping shifted indexes' {
+        $null = $script:SudoPreferenceRules.Add(@{
+            Executable = 'dpkg'; ParameterFilterRule = '*'; Sudo = $true; SudoAs = $null
+        })
+        $null = $script:SudoPreferenceRules.Add(@{
+            Executable = 'apt'; ParameterFilterRule = '*'; Sudo = $true; SudoAs = $null
+        })
+        $null = $script:SudoPreferenceRules.Add(@{
+            Executable = 'dpkg'; ParameterFilterRule = '*'; Sudo = $true; SudoAs = $null
+        })
+
+        @(Remove-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule '*') |
+            Should -HaveCount 2
+        @(Get-SudoPreferenceRule -All) | Should -HaveCount 1
+        (Get-SudoPreferenceRule -All).Executable | Should -Be 'apt'
+    }
+
+    It 'Should initialize an empty rule store when queried' {
+        Remove-Variable -Name SudoPreferenceRules -Scope Script -ErrorAction Ignore
+
+        { Get-SudoPreferenceRule -All } | Should -Not -Throw
+        @(Get-SudoPreferenceRule -All) | Should -HaveCount 0
+    }
+
+    It 'Should preserve the language mode of a constrained caller script block' {
         $runspace = [runspacefactory]::CreateRunspace()
         $runspace.Open()
 

@@ -1,8 +1,41 @@
-# Add-SudoPreferenceRule -Executable dpkg -ParameterFilterRule {$args -contains '-i' -or $args -contains '--install'}
-# Add-SudoPreferenceRule -Executable dpkg -ParameterFilterRule {$args -contains '-W' -or $args -contains '--show'} -SudoUser otheruser
-# Add-SudoPreferenceRule -EnableSudoForAllCommands
-# Add-SudoPreferenceRule -EnableSudoForAllCommands -SudoUser otheruser
-# Add-SudoPreferenceRule -DisableSudoForAllCommands
+<#
+    .SYNOPSIS
+        Adds or changes a sudo preference rule.
+
+    .DESCRIPTION
+        Registers a command-specific sudo rule or enables or disables sudo for
+        every native command. Parameter filters must be script blocks or the
+        wildcard string '*'. Script blocks are retained without recompilation.
+
+    .PARAMETER Executable
+        Specifies the executable to which the rule applies. Use '*' with a
+        wildcard or constant script-block filter to configure all commands.
+
+    .PARAMETER ParameterFilterRule
+        Specifies '*' to match every argument list or a script block that
+        evaluates the command arguments through its automatic $args variable.
+
+    .PARAMETER EnableSudoForAllCommands
+        Enables sudo for every native command.
+
+    .PARAMETER DisableSudoForAllCommands
+        Disables the global sudo preference without deleting command rules.
+
+    .PARAMETER SudoUser
+        Specifies the user supplied to `sudo -u` when the matching rule applies.
+
+    .EXAMPLE
+        Add-SudoPreferenceRule -Executable 'dpkg' -ParameterFilterRule {
+            $args -contains '--install'
+        }
+
+        Adds a rule that uses sudo for dpkg installation commands.
+
+    .EXAMPLE
+        Add-SudoPreferenceRule -EnableSudoForAllCommands -SudoUser 'root'
+
+        Enables sudo for all native commands and selects the root user.
+#>
 
 function  Add-SudoPreferenceRule
 {
@@ -76,7 +109,7 @@ function  Add-SudoPreferenceRule
         $Script:SudoAll = switch ($ParameterFilterRule)
         {
             '*'     { $true }
-            Default { [bool]$ParameterFilterRule.Invoke() }
+            default { [bool]$ParameterFilterRule.Invoke() }
         }
 
         $script:SudoAllAs = $SudoUser
@@ -86,7 +119,7 @@ function  Add-SudoPreferenceRule
 
     if (Get-SudoPreferenceRule -Executable $Executable -ParameterFilterRule $ParameterFilterRule)
     {
-        Write-Warning "Sudo Preference Rule found. Replacing"
+        Write-Verbose "Sudo Preference Rule found. Replacing"
         $index = [int](Remove-SudoPreferenceRule -Executable $Executable -ParameterFilterRule $ParameterFilterRule)
     }
 
@@ -94,10 +127,11 @@ function  Add-SudoPreferenceRule
     $newRule = @{
         Executable          = $Executable
         ParameterFilterRule = $ParameterFilterRule
-        SudoUser            = $SudoUser
+        Sudo                = $true
+        SudoAs              = $SudoUser
     }
 
-    if ($index)
+    if ($null -ne $index)
     {
         Write-Debug "Replacing Sudo rule for '$Executable' with filter '$ParameterFilterRule' at index $index"
         $null = $script:SudoPreferenceRules.Insert($index, $newRule)

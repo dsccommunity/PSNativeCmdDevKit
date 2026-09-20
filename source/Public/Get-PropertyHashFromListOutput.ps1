@@ -1,3 +1,41 @@
+<#
+    .SYNOPSIS
+        Converts line-oriented native output into a property hashtable.
+
+    .DESCRIPTION
+        Parses lines containing named property and value groups, normalizes
+        property names, appends continuation lines, and routes redirected
+        standard-error records to a caller-provided handler.
+
+    .PARAMETER Output
+        Specifies one or more native-command output lines or error records.
+
+    .PARAMETER Regex
+        Specifies the regular expression used to capture named `property` and
+        `val` groups.
+
+    .PARAMETER AllowedPropertyName
+        Specifies property names to retain at the top level. The default '*'
+        accepts every parsed property.
+
+    .PARAMETER DiscardExtraProperties
+        Discards parsed properties that are not listed in AllowedPropertyName.
+
+    .PARAMETER AddExtraPropertiesAsKey
+        Specifies the nested hashtable key used for properties that are not in
+        AllowedPropertyName.
+
+    .PARAMETER ErrorHandling
+        Specifies the script block that receives redirected standard-error
+        records.
+
+    .EXAMPLE
+        'Name: PowerShell', 'Version: 7.6' |
+            Get-PropertyHashFromListOutput
+
+        Returns a hashtable containing Name and Version.
+#>
+
 function Get-PropertyHashFromListOutput
 {
     [CmdletBinding(DefaultParameterSetName = 'AddExtraPropertiesUnderKey')]
@@ -93,7 +131,7 @@ function Get-PropertyHashFromListOutput
                     Write-Debug "  Adding second line to property $lastProperty"
                     $properties[$lastProperty] += "`n" + $line.TrimEnd()
                 }
-                else
+                elseif (-not $DiscardExtraProperties.IsPresent)
                 {
                     $properties[$AddExtraPropertiesAsKey][$lastProperty] += $line.Trim()
                 }
