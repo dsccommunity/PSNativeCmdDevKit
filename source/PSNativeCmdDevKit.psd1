@@ -26,7 +26,7 @@ CompanyName = 'SynEdgy'
 Copyright = '(c) 2020 Gael Colas. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'A set of DSC Resources to manage Packages.'
+Description = 'Helpers for building PowerShell wrappers around native commands.'
 
 # Minimum version of the Windows PowerShell engine required by this module
 PowerShellVersion = '5.1'
@@ -119,5 +119,4 @@ PrivateData = @{
 # DefaultCommandPrefix = ''
 
 }
-
 

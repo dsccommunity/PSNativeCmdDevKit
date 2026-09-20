@@ -1,3 +1,26 @@
+<#
+    .SYNOPSIS
+        Gets registered sudo preference rules.
+
+    .DESCRIPTION
+        Returns all registered rules or filters rules by executable and,
+        optionally, by the exact parameter-filter object.
+
+    .PARAMETER Executable
+        Specifies the executable whose registered rules should be returned.
+
+    .PARAMETER ParameterFilterRule
+        Specifies the exact script block or wildcard filter to match.
+
+    .PARAMETER All
+        Returns every registered sudo preference rule.
+
+    .EXAMPLE
+        Get-SudoPreferenceRule -Executable 'dpkg'
+
+        Returns all rules registered for dpkg.
+#>
+
 function  Get-SudoPreferenceRule
 {
     [CmdletBinding(DefaultParameterSetName = 'all')]
@@ -12,7 +35,7 @@ function  Get-SudoPreferenceRule
         $Executable,
 
         [Parameter(ParameterSetName = 'byCommand')]
-        [string]
+        [object]
         $ParameterFilterRule,
 
         [Parameter(ParameterSetName = 'all')]
@@ -36,7 +59,7 @@ function  Get-SudoPreferenceRule
         $script:SudoPreferenceRules.Where{
             $_.Executable -eq $Executable -and
             $(
-                if ($ParameterFilterRule -and $ParameterFilterRule.Trim() -ne '*')
+                if ($ParameterFilterRule -and $ParameterFilterRule -ne '*')
                 {
                     $_.ParameterFilterRule -eq $ParameterFilterRule
                 }

@@ -1,192 +1,185 @@
 trigger:
   branches:
     include:
-    - master
+      - master
   paths:
     exclude:
-    - CHANGELOG.md
+      - CHANGELOG.md
   tags:
     include:
-    - "v*"
+      - "v*"
     exclude:
-    - "*-*"
+      - "*-*"
+
+parameters:
+  - name: PlatformMatrix
+    type: object
+    default:
+      Windows_PWSH7:
+        vmImage: windows-latest
+        usePwsh: true
+        platformName: Windows_PWSH7
+      Windows_PWSH5:
+        vmImage: windows-latest
+        usePwsh: false
+        platformName: Windows_PWSH5
+      Ubuntu_PWSH7:
+        vmImage: ubuntu-latest
+        usePwsh: true
+        platformName: Ubuntu_PWSH7
+      MacOS_PWSH7:
+        vmImage: macos-latest
+        usePwsh: true
+        platformName: MacOS_PWSH7
+
+variables:
+  buildFolderName: output
+  buildArtifactName: output
+  testResultFolderName: testResults
+  defaultBranch: master
+  Agent.Source.Git.ShallowFetchDepth: 0
 
 stages:
   - stage: Build
     jobs:
       - job: Package_Module
-        displayName: 'Package Module'
+        displayName: Package Module
         pool:
-          vmImage: 'ubuntu 16.04'
+          vmImage: ubuntu-latest
         steps:
-          - task: GitVersion@5
-            name: gitVersion
-            displayName: 'Evaluate Next Version'
-            inputs:
-              runtime: 'core'
-              configFilePath: 'GitVersion.yml'
+          - pwsh: |
+              dotnet tool install --global GitVersion.Tool --version 5.*
+              $gitVersionObject = dotnet-gitversion | ConvertFrom-Json
+              $gitVersionObject.PSObject.Properties.ForEach{
+                  Write-Host -Object "Setting task variable '$($_.Name)' to '$($_.Value)'."
+                  Write-Host -Object "##vso[task.setvariable variable=$($_.Name);]$($_.Value)"
+              }
+              Write-Host -Object "##vso[build.updatebuildnumber]$($gitVersionObject.FullSemVer)"
+            displayName: Calculate ModuleVersion
 
           - task: PowerShell@2
-            name: package
-            displayName: 'Build & Package Module'
+            displayName: Build and Package Module
             inputs:
-              filePath: './build.ps1'
-              arguments: '-ResolveDependency -tasks pack'
+              filePath: ./build.ps1
+              arguments: -ResolveDependency -Tasks pack
               pwsh: true
             env:
-              ModuleVersion: $(gitVersion.NuGetVersionV2)
+              ModuleVersion: $(NuGetVersionV2)
 
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publish Build Artifact'
+          - task: PublishPipelineArtifact@1
+            displayName: Publish Build Artifact
             inputs:
-              pathToPublish: 'output/'
-              artifactName: 'output'
-              publishLocation: 'Container'
+              targetPath: $(buildFolderName)
+              artifact: $(buildArtifactName)
+              publishLocation: pipeline
+              parallel: true
 
   - stage: Test
     dependsOn: Build
     jobs:
-      - job: Test_HQRM
-        displayName: 'HQRM'
+      - job: Test
+        strategy:
+          matrix:
+            ${{ parameters.PlatformMatrix }}
+        timeoutInMinutes: 0
         pool:
-          vmImage: 'ubuntu-latest'
-        timeoutInMinutes: '0'
+          vmImage: $[ variables['vmImage'] ]
         steps:
-          - task: DownloadBuildArtifacts@0
-            displayName: 'Download Build Artifact'
+          - task: DownloadPipelineArtifact@2
+            displayName: Download Build Artifact
             inputs:
-              buildType: 'current'
-              downloadType: 'single'
-              artifactName: 'output'
-              downloadPath: '$(Build.SourcesDirectory)'
-          - task: PowerShell@2
-            name: test
-            displayName: 'Run HQRM Test'
-            inputs:
-              filePath: './build.ps1'
-              arguments: '-Tasks hqrmtest'
-              pwsh: true
-          - task: PublishTestResults@2
-            displayName: 'Publish Test Results'
-            condition: succeededOrFailed()
-            inputs:
-              testResultsFormat: 'NUnit'
-              testResultsFiles: 'output/testResults/NUnit*.xml'
-              testRunTitle: 'HQRM'
+              buildType: current
+              artifactName: $(buildArtifactName)
+              targetPath: $(Build.SourcesDirectory)/$(buildFolderName)
 
-      - job: Test_Unit_Windows
-        displayName: 'Unit Windows'
-        pool:
-          vmImage: 'windows-2019'
-        timeoutInMinutes: '0'
-        steps:
-          - powershell: |
-              $repositoryOwner,$repositoryName = $env:BUILD_REPOSITORY_NAME -split '/'
-              echo "##vso[task.setvariable variable=RepositoryOwner;isOutput=true]$repositoryOwner"
-              echo "##vso[task.setvariable variable=RepositoryName;isOutput=true]$repositoryName"
-            name: dscBuildVariable
-            displayName: 'Set Environment Variables'
-          - task: DownloadBuildArtifacts@0
-            displayName: 'Download Build Artifact'
-            inputs:
-              buildType: 'current'
-              downloadType: 'single'
-              artifactName: 'output'
-              downloadPath: '$(Build.SourcesDirectory)'
           - task: PowerShell@2
-            name: test
-            displayName: 'Run Unit Test'
+            displayName: Run Tests
             inputs:
-              filePath: './build.ps1'
-              arguments: "-Tasks test -PesterScript 'tests/Unit'"
-              pwsh: false
-          - task: PublishTestResults@2
-            displayName: 'Publish Test Results'
-            condition: succeededOrFailed()
-            inputs:
-              testResultsFormat: 'NUnit'
-              testResultsFiles: 'output/testResults/NUnit*.xml'
-              testRunTitle: 'Unit (Windows Server Core)'
-          - task: PublishCodeCoverageResults@1
-            displayName: 'Publish Code Coverage'
-            condition: succeededOrFailed()
-            inputs:
-              codeCoverageTool: 'JaCoCo'
-              summaryFileLocation: 'output/testResults/CodeCov*.xml'
-              pathToSources: '$(Build.SourcesDirectory)/output/$(dscBuildVariable.RepositoryName)'
+              filePath: ./build.ps1
+              arguments: -Tasks test
+              pwsh: $(usePwsh)
 
-      - job: Test_Unit_ubuntu
-        displayName: 'Unit ubuntu'
-        pool:
-          vmImage: 'ubuntu-latest'
-        timeoutInMinutes: '0'
-        steps:
-          - powershell: |
-              $repositoryOwner,$repositoryName = $env:BUILD_REPOSITORY_NAME -split '/'
-              echo "##vso[task.setvariable variable=RepositoryOwner;isOutput=true]$repositoryOwner"
-              echo "##vso[task.setvariable variable=RepositoryName;isOutput=true]$repositoryName"
-            name: dscBuildVariable
-            displayName: 'Set Environment Variables'
-          - task: DownloadBuildArtifacts@0
-            displayName: 'Download Build Artifact'
-            inputs:
-              buildType: 'current'
-              downloadType: 'single'
-              artifactName: 'output'
-              downloadPath: '$(Build.SourcesDirectory)'
-          - task: PowerShell@2
-            name: test
-            displayName: 'Run Unit Test'
-            inputs:
-              filePath: './build.ps1'
-              arguments: "-Tasks test -PesterScript 'tests/Unit'"
-              pwsh: true
           - task: PublishTestResults@2
-            displayName: 'Publish Test Results'
+            displayName: Publish Test Results
             condition: succeededOrFailed()
             inputs:
-              testResultsFormat: 'NUnit'
-              testResultsFiles: 'output/testResults/NUnit*.xml'
-              testRunTitle: 'Unit (Ubuntu)'
-          - task: PublishCodeCoverageResults@1
-            displayName: 'Publish Code Coverage'
-            condition: succeededOrFailed()
-            inputs:
-              codeCoverageTool: 'JaCoCo'
-              summaryFileLocation: 'output/testResults/CodeCov*.xml'
-              pathToSources: '$(Build.SourcesDirectory)/output/$(dscBuildVariable.RepositoryName)'
+              testResultsFormat: NUnit
+              testResultsFiles: $(buildFolderName)/$(testResultFolderName)/NUnit*.xml
+              testRunTitle: $(platformName)
 
-      - job: Test_Integration
-        displayName: 'Integration'
-        pool:
-          vmImage: 'ubuntu-latest'
-        timeoutInMinutes: '0'
-        steps:
-          - task: DownloadBuildArtifacts@0
-            displayName: 'Download Build Artifact'
-            inputs:
-              buildType: 'current'
-              downloadType: 'single'
-              artifactName: 'output'
-              downloadPath: '$(Build.SourcesDirectory)'
-          - task: PowerShell@2
-            name: test
-            displayName: 'Run Integration Test'
-            inputs:
-              filePath: './build.ps1'
-              arguments: "-Tasks test -PesterScript 'tests/Integration' -CodeCoverageThreshold 0"
-              pwsh: true
-          - task: PublishTestResults@2
-            displayName: 'Publish Test Results'
+          - task: PublishPipelineArtifact@1
+            displayName: Publish Coverage Artifact
             condition: succeededOrFailed()
             inputs:
-              testResultsFormat: 'NUnit'
-              testResultsFiles: 'output/testResults/NUnit*.xml'
-              testRunTitle: 'Integration (ubuntu-latest)'
+              targetPath: $(buildFolderName)/$(testResultFolderName)
+              artifactName: CodeCoverage_$(platformName)_$(System.JobAttempt)
+              parallel: true
+
+      - job: HQRM
+        displayName: HQRM
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: DownloadPipelineArtifact@2
+            displayName: Download Build Artifact
+            inputs:
+              buildType: current
+              artifactName: $(buildArtifactName)
+              targetPath: $(Build.SourcesDirectory)/$(buildFolderName)
+
+          - task: PowerShell@2
+            displayName: Run HQRM Tests
+            inputs:
+              filePath: ./build.ps1
+              arguments: -Tasks hqrmtest
+              pwsh: true
+
+          - task: PublishTestResults@2
+            displayName: Publish HQRM Results
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: NUnit
+              testResultsFiles: $(buildFolderName)/$(testResultFolderName)/NUnitXml_HQRM*.xml
+              testRunTitle: HQRM
+
+      - job: Code_Coverage
+        displayName: Publish Code Coverage
+        dependsOn:
+          - Test
+        condition: succeededOrFailed()
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: DownloadPipelineArtifact@2
+            displayName: Download Build Artifact
+            inputs:
+              buildType: current
+              artifactName: $(buildArtifactName)
+              targetPath: $(Build.SourcesDirectory)/$(buildFolderName)
+
+          - ${{ each platform in parameters.PlatformMatrix }}:
+              - task: DownloadPipelineArtifact@2
+                displayName: Download Coverage ${{ platform.Key }}
+                inputs:
+                  buildType: current
+                  artifactName: CodeCoverage_${{ platform.Value.platformName }}_$(System.JobAttempt)
+                  targetPath: $(Build.SourcesDirectory)/$(buildFolderName)/$(testResultFolderName)
+
+          - task: PowerShell@2
+            displayName: Merge Code Coverage
+            inputs:
+              filePath: ./build.ps1
+              arguments: -Tasks merge
+              pwsh: true
+
+          - task: PublishCodeCoverageResults@2
+            displayName: Publish Azure Code Coverage
+            inputs:
+              summaryFileLocation: $(buildFolderName)/$(testResultFolderName)/JaCoCo_coverage.xml
+              pathToSources: $(Build.SourcesDirectory)
 
   - stage: Deploy
     dependsOn: Test
-    # Only execute deploy stage if we're on master and previous stage succeeded
     condition: |
       and(
         succeeded(),
@@ -198,33 +191,25 @@ stages:
       )
     jobs:
       - job: Deploy_Module
-        displayName: 'Deploy Module'
+        displayName: Deploy Module
         pool:
-          vmImage: 'ubuntu 16.04'
+          vmImage: ubuntu-latest
         steps:
-          - task: DownloadBuildArtifacts@0
-            displayName: 'Download Build Artifact'
+          - task: DownloadPipelineArtifact@2
+            displayName: Download Build Artifact
             inputs:
-              buildType: 'current'
-              downloadType: 'single'
-              artifactName: 'output'
-              downloadPath: '$(Build.SourcesDirectory)'
+              buildType: current
+              artifactName: $(buildArtifactName)
+              targetPath: $(Build.SourcesDirectory)/$(buildFolderName)
+
           - task: PowerShell@2
-            name: publishRelease
-            displayName: 'Publish Release'
+            displayName: Publish Release
             inputs:
-              filePath: './build.ps1'
-              arguments: '-tasks publish'
+              filePath: ./build.ps1
+              arguments: -Tasks publish
               pwsh: true
             env:
               GitHubToken: $(GitHubToken)
               GalleryApiToken: $(GalleryApiToken)
-          - task: PowerShell@2
-            name: sendChangelogPR
-            displayName: 'Send Changelog PR'
-            inputs:
-              filePath: './build.ps1'
-              arguments: '-tasks Create_ChangeLog_GitHub_PR'
-              pwsh: true
-            env:
-              GitHubToken: $(GitHubToken)
+              ReleaseBranch: $(defaultBranch)
+              MainGitBranch: $(defaultBranch)

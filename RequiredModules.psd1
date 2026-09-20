@@ -1,23 +1,22 @@
 @{
-    # Set up a mini virtual environment...
-    PSDependOptions             = @{
-        AddToPath  = $true
-        Target     = 'output\RequiredModules'
-        Parameters = @{
-
-        }
-    }
-
     InvokeBuild                 = 'latest'
     PSScriptAnalyzer            = 'latest'
-    Pester                      = '4.10.1'
-    'DscResource.Test'          = 'latest'
-    'DscResource.AnalyzerRules' = 'latest'
-    #'DscResource.Common'        = 'latest'
-    Plaster                     = 'latest'
+    Pester                      = 'latest'
     ModuleBuilder               = 'latest'
     ChangelogManagement         = 'latest'
-    Sampler                     = 'latest'
+    Sampler                     = @{
+        version    = '0.121.0-preview0001'
+        Parameters = @{
+            AllowPrerelease = $true
+        }
+    }
+    'Sampler.GitHubTasks'       = 'latest'
+    MarkdownLinkCheck           = 'latest'
+    'DscResource.Test'          = 'latest'
+    'DscResource.AnalyzerRules' = 'latest'
+    'DscResource.DocGenerator'  = 'latest'
+    Plaster                     = 'latest'
+    platyPS                     = 'latest'
     xDscResourceDesigner        = 'latest'
-
+    'Microsoft.PowerShell.PSResourceGet' = 'latest'
 }

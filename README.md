@@ -6,24 +6,27 @@
 [![PowerShell Gallery (with prereleases)](https://img.shields.io/powershellgallery/vpre/PSNativeCmdDevKit?label=PSNativeCmdDevKit%20Preview)](https://www.powershellgallery.com/packages/PSNativeCmdDevKit/)
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSNativeCmdDevKit?label=PSNativeCmdDevKit)](https://www.powershellgallery.com/packages/PSNativeCmdDevKit/)
 
-A set of functions to help develop "Native Command Wrapper" faster.
+A set of functions for building PowerShell wrappers around native commands.
 
 ## Native Command Wrapper helper functions
 
-When you create modules that wrap binary executables and parses their output, you follow a similar pattern.
+Modules that wrap native executables commonly need to build argument lists,
+combine standard error with standard output, parse line-oriented output, and
+apply platform-specific elevation behavior.
 
 You build the command and its parameters based on what you want to achieve, redirect the Error stream to the success stream, process the output with regex-fu, and desinterlace the error stream to have its own handling.
 
-If you're on Linux or Mac, you might also want to handle Sudo when invoking those commands.
-Some command can run without sudo or not, dependencing on the parameters used. Maybe an all or nothing approach is not the best, or maybe you want to let the user specify what other user to sudo as when running some commands.
+On Linux and macOS, wrappers may also need to apply `sudo` only to specific
+commands or argument combinations.
 
-This module tries to address these use case and avoid copying the same source code to different modules.
+This module centralizes those patterns so wrappers do not duplicate them.
 
 ## Scenarios
 
 ### Invoke Native Command
 
-Whether you cant to invoke `dpkg` on a Debian or `Choco.exe` on Windows, you will have the same approach.
+Whether you invoke `dpkg` on Debian or `choco.exe` on Windows, the same
+argument-safe approach applies.
 
 Build the parameters you wish to use, add the executable, redirect the STDERR to STDOUT and process those streams (separately).
 
@@ -49,9 +52,55 @@ function Get-LsbRelease {
 }
 ```
 
-The Invoke-NativeCommand tells which executable to invoke, and with what arguments.
-In this example, we don't require sudo either, otherwise we
-could have hadded the `-Sudo` parameter to `Invoke-NativeComand`.
+`Invoke-NativeCommand` specifies the executable and its arguments. Add `-Sudo`
+or `-SudoAs` on Linux or macOS when elevation is required.
+
+The executable and each parameter are invoked as separate values. They are not
+combined into PowerShell source code.
+
+Sudo preference filters accept either `*` to match every parameter list or a
+script block:
+
+```PowerShell
+Add-SudoPreferenceRule -Executable 'dpkg' `
+    -ParameterFilterRule { $args -contains '--install' }
+```
+
+The supplied script block is retained and invoked directly. String expressions
+are rejected and are never recompiled as PowerShell code.
+
+## Security model
+
+This module may be embedded in an Authenticode-signed parent module and execute
+as trusted `FullLanguage` code on a WDAC/App Control enforced host. Public
+functions therefore treat every caller-provided value as untrusted data.
+
+- Executable names and arguments are never compiled as PowerShell source.
+- Sudo filter script blocks are invoked as the original objects so a block
+  created in `ConstrainedLanguage` remains constrained.
+- String expressions are not accepted as sudo filters.
+
+Review `.github/instructions/wdac-language-mode.instructions.md` when changing
+command invocation, script-block handling, exports, nested modules, or signing.
+
+## Building and testing
+
+The repository uses Sampler `0.121.0-preview0001`.
+
+```powershell
+./build.ps1 -ResolveDependency -Tasks noop
+./build.ps1 -Tasks build
+./build.ps1 -Tasks test
+./build.ps1 -Tasks hqrmtest
+./build.ps1 -Tasks docs
+./build.ps1 -Tasks pack
+```
+
+The Azure Pipelines matrix validates Windows PowerShell 5.1 and PowerShell 7 on
+Windows, Linux, and macOS. The package workflow generates command reference
+pages, combines them with hand-authored pages from `source/WikiSource`, and
+packages `output/WikiContent.zip`. Successful release deployments publish that
+content to the repository's GitHub wiki.
 
 ## Converting a list-formatted output to a Hash
 
@@ -66,14 +115,15 @@ Release:        18.04
 Codename:       bionic
 ```
 
-The command `Get-PropertyHashFromListOutput` is a helper function to help parsing key/values properties coming from STDOUT.
+`Get-PropertyHashFromListOutput` parses key/value properties from standard
+output.
 
 The message `No LSB modules are available.` is actually coming from STDERR.
 
 each line of the output that is not coming from STDERR, is of the form: `^\s*(?<property>[\w-\s]*):\s*(?<val>.*)`.
 You can use a customised regex using the parameter `-Regex`.
 
-When steaming the output of the invocation to this function like this:  
+When streaming invocation output to this function:
 `Invoke-NativeCommand -Executable 'lsb_release' -Parameters '--all' |  Get-PropertyHashFromListOutput`
 
 The command is creating a hashtable of Key/value properties, removing spaces and dashes, in this case the hashtable returned would be defined like this:
@@ -87,8 +137,8 @@ The command is creating a hashtable of Key/value properties, removing spaces and
 }
 ```
 
-Because the line output `No LSB modules are available.` is 
-coming from STDERR, it is not parsed by the regex.  
+Because `No LSB modules are available.` comes from standard error, it is not
+parsed by the regular expression.
 Instead, the `-ErrorHandling` scriptblock will process each line of STDERR.
 In this case, the line matching the regex `No\sLSB\smodules` will be displayed on the verbose stream, while every other line comming from STDERR will be written on the error stream.
 
@@ -115,7 +165,7 @@ Vendor: Microsoft Corporation
 Homepage: https://microsoft.com/powershell
 ```
 
-The Description property value here whould be
+The `Description` property value is:
 ```
 PowerShell is an automation and configuration management platform.
 It consists of a cross-platform command-line shell and associated scripting language.

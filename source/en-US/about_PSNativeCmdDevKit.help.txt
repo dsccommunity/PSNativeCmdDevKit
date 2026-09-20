@@ -1,27 +1,31 @@
 TOPIC
-    about_PSNaticeCmdDevKit
+    about_PSNativeCmdDevKit
 
 SHORT DESCRIPTION
-    A collection of PowerShell functions to invoke native commands, cross platform.
+    Cross-platform helpers for invoking native commands and parsing their output.
 
 LONG DESCRIPTION
-    This modules is a collection of functions useful when implementing native command
-    wrappers that need to call a native command, parse the output, and return objects.
-    This is made to support Linux systems, but should also Windows binary commands.
+    PSNativeCmdDevKit provides functions for implementing native command wrappers.
+    It invokes executables with separate argument values, combines standard error
+    with standard output, parses list-formatted output, and supports optional sudo
+    preferences on Linux and macOS.
+
+    Executable names and arguments are never compiled as PowerShell source. Sudo
+    preference script blocks are retained and invoked directly so their original
+    PowerShell language mode is preserved.
 
 EXAMPLES
-    PS /home/user> Invoke-LinuxCommand -Executable 'lsb_release' -Parameters '--all' |
+    PS /home/user> Invoke-NativeCommand -Executable 'lsb_release' -Parameters '--all' |
         Get-PropertyHashFromListOutput
 
 NOTE:
-    Thank you to all those who contributed to this module, by writing code, sharing opinions, and provided feedback.
+    Thank you to everyone who contributes code, reviews, and feedback.
 
 TROUBLESHOOTING NOTE:
-    Look out on the Github repository for issues and new releases.
+    Review open issues and releases in the GitHub repository.
 
 SEE ALSO
   - https://dsccommunity.org/
 
 KEYWORDS
       Linux, Native, Windows, CLI, Command
-

@@ -1,3 +1,31 @@
+<#
+    .SYNOPSIS
+        Invokes a native command with an argument array.
+
+    .DESCRIPTION
+        Invokes an executable without constructing PowerShell source code,
+        optionally applies sudo preferences on Linux or macOS, and redirects
+        standard error into the success stream for downstream parsing.
+
+    .PARAMETER Executable
+        Specifies the native executable or command to invoke.
+
+    .PARAMETER Sudo
+        Invokes the command through sudo on Linux or macOS.
+
+    .PARAMETER SudoAs
+        Invokes the command through `sudo -u` for the specified user on Linux
+        or macOS.
+
+    .PARAMETER Parameters
+        Specifies native argument values in their required order.
+
+    .EXAMPLE
+        Invoke-NativeCommand -Executable 'git' -Parameters '--version'
+
+        Invokes git and returns its combined standard output and standard error.
+#>
+
 function Invoke-NativeCommand
 {
     [cmdletBinding()]
@@ -38,30 +66,26 @@ function Invoke-NativeCommand
         }
     }
 
-    [string[]]$CommandExpression = @()
+    [string] $Command = $Executable
+    [string[]] $CommandParameters = @()
 
     if ($SudoAs -and ($IsLinux -or $IsMacOS))
     {
-        $commandExpression += "sudo -u $SudoAs $Executable"
+        $Command = 'sudo'
+        $CommandParameters += '-u'
+        $CommandParameters += $SudoAs
+        $CommandParameters += $Executable
     }
     elseif ($Sudo -and ($IsLinux -or $IsMacOS))
     {
-        $commandExpression += "sudo $Executable"
-    }
-    else
-    {
-        $commandExpression += $Executable
+        $Command = 'sudo'
+        $CommandParameters += $Executable
     }
 
-    $commandExpression += $Parameters
+    $CommandParameters += $Parameters
 
-    # Mixes the Error stream and the success streams (redirect STDERR with STDOUT)
-    # What was in STDERR will be of type [ErrorRecord] if you need to differentiate for parsing.
-    $commandExpression += '2>&1'
+    Write-Verbose -Message "Running #> $Command $CommandParameters"
 
-    Write-Verbose -Message "Running #> $commandExpression"
-    [scriptblock]$commandExpression = [scriptblock]::create($commandExpression)
-
-    # Stream the output through the pipeline
-    & $commandExpression
+    # Stream output through the pipeline and mix STDERR with STDOUT.
+    & $Command @CommandParameters 2>&1
 }
